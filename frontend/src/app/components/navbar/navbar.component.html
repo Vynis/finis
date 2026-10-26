@@ -1,0 +1,91 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark py-2 px-3 shadow-sm sticky-top" *ngIf="currentUser">
+  <div class="container-fluid">
+    <a class="navbar-brand d-flex align-items-center gap-2" routerLink="/dashboard">
+      <div class="rounded-circle bg-success d-flex align-items-center justify-content-center text-white" style="width: 32px; height: 32px;">
+        <i class="bi bi-graph-up-arrow"></i>
+      </div>
+      <span class="fw-bold tracking-wide text-white">finis</span>
+      <span class="badge bg-secondary text-uppercase ms-1" style="font-size: 0.65rem;">Termômetro</span>
+    </a>
+
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#finisNavbar">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="finisNavbar">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/dashboard" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/termometro" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-calendar3 me-1"></i> Planilha Mensal
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/economia" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-piggy-bank me-1"></i> Economia Anual
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/categorias" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-tags me-1"></i> Categorias
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/cartoes" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-credit-card-2-front me-1"></i> Cartões
+          </a>
+        </li>
+      </ul>
+
+      <div class="d-flex align-items-center gap-3">
+        <!-- Saldo Inicial Badge -->
+        <button class="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3" (click)="onEditBalance()" title="Clique para alterar seu saldo inicial de partida">
+          <i class="bi bi-wallet2 text-success"></i>
+          <span class="small text-muted">Saldo Inicial:</span>
+          <span class="mono-num fw-semibold text-white">R$ {{ currentUser.initialBalance | number:'1.2-2' }}</span>
+          <i class="bi bi-pencil-square ms-1 text-muted small"></i>
+        </button>
+
+        <!-- Quick Add Transaction -->
+        <button class="btn btn-success btn-sm d-flex align-items-center gap-2 rounded-pill px-3 shadow-sm fw-semibold" (click)="onNewTransaction()">
+          <i class="bi bi-plus-circle-fill"></i>
+          <span>Novo Lançamento</span>
+        </button>
+
+        <!-- User Dropdown -->
+        <div class="dropdown">
+          <button class="btn btn-link text-white text-decoration-none dropdown-toggle d-flex align-items-center gap-2 p-0" type="button" data-bs-toggle="dropdown">
+            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white fw-bold" style="width: 32px; height: 32px;">
+              {{ currentUser.name.charAt(0).toUpperCase() }}
+            </div>
+            <span class="d-none d-md-inline small fw-semibold">{{ currentUser.name }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li class="dropdown-header">Conectado como <strong>{{ currentUser.email }}</strong></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2" href="javascript:void(0)" (click)="onEditBalance()">
+                <i class="bi bi-gear"></i> Ajustar Saldo Inicial
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item text-danger d-flex align-items-center gap-2" href="javascript:void(0)" (click)="onResetAll()">
+                <i class="bi bi-trash3-fill"></i> Reiniciar ao Zero...
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item text-danger d-flex align-items-center gap-2" href="javascript:void(0)" (click)="logout()">
+                <i class="bi bi-box-arrow-right"></i> Sair do Finis
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

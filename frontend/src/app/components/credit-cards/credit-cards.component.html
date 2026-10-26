@@ -1,0 +1,419 @@
+<div class="container py-4">
+  <!-- Page Header -->
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark">
+        <i class="bi bi-credit-card-2-front text-primary me-2"></i> Cartões de Crédito
+      </h2>
+      <p class="text-muted mb-0 small">
+        Gerencie limites, faturas e parcelamentos com precisão — compras no cartão entram na fatura sem descontrolar o saldo em conta!
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold" (click)="openNewCardModal()">
+        <i class="bi bi-plus-lg me-1"></i> Novo Cartão
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="loadingCards" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted small mt-2">Carregando cartões...</p>
+  </div>
+
+  <!-- Empty State (No cards yet) -->
+  <div *ngIf="!loadingCards && cards.length === 0" class="card card-finis p-5 text-center my-4">
+    <div class="mb-3">
+      <i class="bi bi-credit-card text-muted" style="font-size: 3.5rem;"></i>
+    </div>
+    <h4 class="fw-bold text-dark">Nenhum cartão de crédito cadastrado</h4>
+    <p class="text-muted mx-auto" style="max-width: 520px;">
+      Cadastre seu primeiro cartão (como Nubank, Itaú, Inter, etc.) informando o limite e os dias de fechamento e vencimento. As compras que você fizer no cartão serão agrupadas na fatura e debitadas do Termômetro somente no dia do vencimento!
+    </p>
+    <div class="mt-3">
+      <button class="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-sm" (click)="openNewCardModal()">
+        <i class="bi bi-plus-lg me-1"></i> Cadastrar Meu Primeiro Cartão
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards Section -->
+  <div *ngIf="!loadingCards && cards.length > 0">
+    <h5 class="fw-bold text-dark mb-3">Meus Cartões</h5>
+    
+    <div class="row g-4 mb-4">
+      <div *ngFor="let card of cards" class="col-12 col-md-6 col-lg-4">
+        <div
+          class="credit-card-preview p-4 position-relative"
+          [class.active-card]="selectedCard?.id === card.id"
+          [style.background]="card.colorHex"
+          (click)="selectCard(card)"
+        >
+          <!-- Card Top Bar -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="fw-bold fs-5 text-white">{{ card.name }}</span>
+            <span class="small fw-semibold text-white-50 text-uppercase">{{ card.brand }}</span>
+          </div>
+
+          <!-- Chip and Contactless -->
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="card-chip"></div>
+            <i class="bi bi-wifi text-white-50 fs-5" style="transform: rotate(90deg);"></i>
+          </div>
+
+          <!-- Card Details -->
+          <div class="d-flex justify-content-between align-items-end">
+            <div>
+              <div class="small text-white-50">Limite Disponível</div>
+              <div class="fw-bold fs-5 text-white mono-num">
+                R$ {{ card.availableLimit | number:'1.2-2' }}
+              </div>
+            </div>
+            <div class="text-end">
+              <div class="small text-white-50">Fecha {{ card.closingDay }} • Vence {{ card.dueDay }}</div>
+              <div class="small text-white mono-num">Limite: R$ {{ card.limit | number:'1.2-2' }}</div>
+            </div>
+          </div>
+
+          <!-- Limit Progress Bar -->
+          <div class="progress mt-3" style="height: 6px; background-color: rgba(255, 255, 255, 0.25);">
+            <div
+              class="progress-bar bg-white"
+              role="progressbar"
+              [style.width.%]="getLimitPercentage(card)"
+            ></div>
+          </div>
+
+          <!-- Card Action Buttons -->
+          <div class="position-absolute top-0 end-0 p-2 d-flex gap-1" (click)="$event.stopPropagation()">
+            <button class="btn btn-sm btn-link text-white p-1" (click)="openEditCardModal(card)" title="Editar Cartão">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn btn-sm btn-link text-white p-1" (click)="deleteCard(card)" title="Excluir Cartão">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected Card Invoices Explorer -->
+    <div *ngIf="selectedCard" class="card card-finis p-4 mt-2">
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2 border-bottom pb-3">
+        <div>
+          <h4 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+            <span>Faturas de: <strong>{{ selectedCard.name }}</strong></span>
+            <span class="badge rounded-pill px-3 py-1 text-white small" [style.background-color]="selectedCard.colorHex">
+              {{ selectedCard.brand }}
+            </span>
+          </h4>
+          <span class="text-muted small">
+            Melhor dia de compra (fechamento): <strong>dia {{ selectedCard.closingDay }}</strong> • Vencimento da fatura: <strong>dia {{ selectedCard.dueDay }}</strong>
+          </span>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <div class="text-end">
+            <div class="small text-muted">Comprometido no Cartão</div>
+            <div class="fw-bold mono-num text-danger fs-5">
+              R$ {{ selectedCard.totalUsedLimit | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoices Timeline / Tabs -->
+      <div class="mb-4">
+        <label class="form-label small fw-semibold text-muted text-uppercase mb-2">Selecione o Mês da Fatura:</label>
+        <div class="d-flex flex-wrap gap-2">
+          <div
+            *ngFor="let inv of upcomingInvoices"
+            class="invoice-tab-item border p-3 flex-fill text-center"
+            [class.active]="selectedInvoice?.year === inv.year && selectedInvoice?.month === inv.month"
+            (click)="selectInvoice(inv)"
+            style="min-width: 140px;"
+          >
+            <div class="small fw-bold text-dark">{{ inv.monthName }} / {{ inv.year }}</div>
+            <div class="mono-num fw-bold fs-6 my-1" [ngClass]="inv.isPaid ? 'text-success' : 'text-danger'">
+              R$ {{ inv.totalAmount | number:'1.2-2' }}
+            </div>
+            <span
+              class="badge rounded-pill small"
+              [ngClass]="{
+                'bg-success': inv.status === 'Paga',
+                'bg-primary': inv.status === 'Aberta',
+                'bg-warning text-dark': inv.status === 'Fechada'
+              }"
+            >
+              {{ inv.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice Content Details -->
+      <div *ngIf="selectedInvoice">
+        <!-- Invoice Header Card -->
+        <div class="p-3 mb-4 rounded-3 bg-light border d-flex flex-wrap justify-content-between align-items-center gap-3">
+          <div>
+            <div class="small text-muted text-uppercase fw-semibold">
+              Fatura de {{ selectedInvoice.monthName }} de {{ selectedInvoice.year }}
+            </div>
+            <div class="d-flex align-items-center gap-2 mt-1">
+              <span class="fs-3 fw-bold mono-num" [ngClass]="selectedInvoice.isPaid ? 'text-success' : 'text-danger'">
+                R$ {{ selectedInvoice.totalAmount | number:'1.2-2' }}
+              </span>
+              <span
+                class="badge px-3 py-1 rounded-pill"
+                [ngClass]="{
+                  'bg-success': selectedInvoice.status === 'Paga',
+                  'bg-primary': selectedInvoice.status === 'Aberta',
+                  'bg-warning text-dark': selectedInvoice.status === 'Fechada'
+                }"
+              >
+                {{ selectedInvoice.status }}
+              </span>
+            </div>
+            <div class="small text-muted mt-1">
+              <i class="bi bi-calendar-event me-1"></i> Vencimento: <strong>{{ selectedInvoice.dueDate | date:'dd/MM/yyyy' }}</strong>
+              • Fechamento: <strong>{{ selectedInvoice.closingDate | date:'dd/MM/yyyy' }}</strong>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center">
+            <button
+              *ngIf="!selectedInvoice.isPaid && selectedInvoice.totalAmount > 0"
+              class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm"
+              (click)="openPayInvoiceModal(selectedInvoice)"
+            >
+              <i class="bi bi-check2-circle me-1"></i> Pagar Fatura / Quitar no Termômetro
+            </button>
+            <div *ngIf="selectedInvoice.isPaid" class="text-success fw-semibold small d-flex align-items-center gap-1">
+              <i class="bi bi-patch-check-fill fs-5"></i>
+              <span>Fatura quitada no Termômetro</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transactions Table for this Invoice -->
+        <h6 class="fw-bold text-dark mb-2">
+          <i class="bi bi-receipt me-1"></i> Lançamentos desta Fatura ({{ selectedInvoice.transactions.length }})
+        </h6>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr class="small text-muted text-uppercase">
+                <th>Data Compra</th>
+                <th>Descrição</th>
+                <th>Categoria</th>
+                <th>Parcela</th>
+                <th class="text-end">Valor na Fatura</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngIf="selectedInvoice.transactions.length === 0">
+                <td colspan="5" class="text-center py-4 text-muted small">
+                  Nenhuma compra registrada para esta fatura até o momento.
+                </td>
+              </tr>
+              <tr *ngFor="let t of selectedInvoice.transactions">
+                <td class="mono-num small">{{ t.date | date:'dd/MM/yyyy' }}</td>
+                <td class="fw-semibold text-dark">{{ t.description }}</td>
+                <td>
+                  <span class="badge rounded-pill text-white px-2 py-1 small" [style.background-color]="t.categoryColor">
+                    {{ t.categoryName }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge bg-light text-dark border">
+                    {{ t.installmentNumber && t.totalInstallments ? (t.installmentNumber + '/' + t.totalInstallments) : 'À vista' }}
+                  </span>
+                </td>
+                <td class="mono-num fw-bold text-end text-danger">
+                  - R$ {{ t.amount | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Criar / Editar Cartão -->
+<div class="modal fade show d-block" *ngIf="isCardModalOpen" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-credit-card-2-front text-primary me-2"></i>
+          {{ cardToEdit ? 'Editar Cartão' : 'Novo Cartão de Crédito' }}
+        </h5>
+        <button type="button" class="btn-close" (click)="closeCardModal()"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="cardError" class="alert alert-danger py-2 small mb-3">
+          {{ cardError }}
+        </div>
+
+        <form (ngSubmit)="saveCard()">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Nome do Cartão (Apelido)</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="formName"
+              name="formName"
+              placeholder="Ex: Nubank Roxinho, Itaú Click, Inter Mastercard"
+              required
+            />
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Limite Total (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control mono-num"
+                [(ngModel)]="formLimit"
+                name="formLimit"
+                placeholder="0,00"
+                required
+              />
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Bandeira</label>
+              <select class="form-select" [(ngModel)]="formBrand" name="formBrand">
+                <option *ngFor="let b of brands" [value]="b">{{ b }}</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Dia de Fechamento</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                class="form-control mono-num"
+                [(ngModel)]="formClosingDay"
+                name="formClosingDay"
+                required
+              />
+              <span class="text-muted" style="font-size: 0.72rem;">Melhor dia de compra</span>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Dia de Vencimento</label>
+              <input
+                type="number"
+                min="1"
+                max="31"
+                class="form-control mono-num"
+                [(ngModel)]="formDueDay"
+                name="formDueDay"
+                required
+              />
+              <span class="text-muted" style="font-size: 0.72rem;">Dia que sai da conta</span>
+            </div>
+          </div>
+
+          <!-- Cor do Cartão -->
+          <div class="mb-4">
+            <label class="form-label small fw-semibold text-secondary mb-2">Cor do Cartão</label>
+            <div class="d-flex flex-wrap gap-2">
+              <div
+                *ngFor="let c of paletteColors"
+                class="color-swatch"
+                [style.background-color]="c.hex"
+                [class.active]="formColor === c.hex"
+                (click)="formColor = c.hex"
+                [title]="c.name"
+              ></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeCardModal()" [disabled]="cardSaving">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" [disabled]="cardSaving">
+              <span *ngIf="cardSaving" class="spinner-border spinner-border-sm me-2"></span>
+              <span>{{ cardToEdit ? 'Salvar Alterações' : 'Cadastrar Cartão' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Pagar Fatura -->
+<div class="modal fade show d-block" *ngIf="isPayModalOpen" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg rounded-4">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="bi bi-wallet2 text-success me-2"></i> Pagar Fatura do Cartão
+        </h5>
+        <button type="button" class="btn-close" (click)="closePayModal()"></button>
+      </div>
+
+      <div class="modal-body p-4" *ngIf="invoiceToPay">
+        <p class="text-muted small">
+          Ao confirmar, o Finis lançará uma <strong>Saída Fixa</strong> no Termômetro na data escolhida, debitando do saldo da sua conta bancária.
+        </p>
+
+        <div *ngIf="payError" class="alert alert-danger py-2 small mb-3">
+          {{ payError }}
+        </div>
+
+        <form (ngSubmit)="confirmPayInvoice()">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Valor a Pagar (R$)</label>
+            <input
+              type="number"
+              step="0.01"
+              class="form-control form-control-lg mono-num fw-bold text-danger"
+              [(ngModel)]="payAmount"
+              name="payAmount"
+              required
+            />
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Data do Pagamento</label>
+              <input type="date" class="form-control" [(ngModel)]="payDate" name="payDate" required />
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Forma de Pagamento</label>
+              <select class="form-select" [(ngModel)]="payMethod" name="payMethod">
+                <option [ngValue]="1">Pix</option>
+                <option [ngValue]="3">Cartão de Débito</option>
+                <option [ngValue]="5">Boleto Bancário</option>
+                <option [ngValue]="6">Transferência</option>
+                <option [ngValue]="4">Dinheiro</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closePayModal()" [disabled]="paying">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="paying">
+              <span *ngIf="paying" class="spinner-border spinner-border-sm me-2"></span>
+              <span>Confirmar Pagamento</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

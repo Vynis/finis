@@ -1,0 +1,174 @@
+<div class="container-fluid px-md-4 py-4">
+  <!-- Top Bar: Title & New Category Button -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h2 class="fw-bold mb-0 text-dark">Categorias Financeiras</h2>
+        <span class="badge bg-secondary-subtle text-secondary border">Organização</span>
+      </div>
+      <p class="text-muted small mb-0">Cadastre, edite e personalize as categorias de receitas e despesas</p>
+    </div>
+
+    <button class="btn btn-success d-flex align-items-center gap-2 rounded-pill px-4 fw-semibold shadow-sm" (click)="openCreateModal()">
+      <i class="bi bi-plus-circle-fill"></i>
+      <span>Nova Categoria</span>
+    </button>
+  </div>
+
+  <!-- Type Filter Tabs -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <button class="btn btn-sm rounded-pill px-3 fw-semibold" [ngClass]="selectedTypeFilter === 0 ? 'btn-dark' : 'btn-light border'" (click)="setFilter(0)">
+      Todas ({{ categories.length }})
+    </button>
+    <button class="btn btn-sm rounded-pill px-3 fw-semibold" [ngClass]="selectedTypeFilter === 1 ? 'btn-success text-white' : 'btn-light border text-success'" (click)="setFilter(1)">
+      <i class="bi bi-arrow-down-left me-1"></i> Entradas
+    </button>
+    <button class="btn btn-sm rounded-pill px-3 fw-semibold" [ngClass]="selectedTypeFilter === 2 ? 'btn-danger text-white' : 'btn-light border text-danger'" (click)="setFilter(2)">
+      <i class="bi bi-calendar-event me-1"></i> Saídas Fixas
+    </button>
+    <button class="btn btn-sm rounded-pill px-3 fw-semibold" [ngClass]="selectedTypeFilter === 3 ? 'btn-warning text-dark' : 'btn-light border text-dark'" (click)="setFilter(3)">
+      <i class="bi bi-cart me-1"></i> Gastos Diários
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted small mt-2">Carregando categorias...</p>
+  </div>
+
+  <!-- Categories Grid -->
+  <div *ngIf="!loading" class="row g-3">
+    <div *ngIf="filteredCategories.length === 0" class="col-12 text-center py-5">
+      <div class="rounded-circle bg-light d-inline-flex p-3 text-muted mb-2">
+        <i class="bi bi-tags fs-1"></i>
+      </div>
+      <p class="text-muted">Nenhuma categoria encontrada para este filtro.</p>
+    </div>
+
+    <div *ngFor="let cat of filteredCategories" class="col-12 col-md-6 col-lg-4 col-xl-3">
+      <div class="card card-finis p-3 h-100 position-relative border-start border-4" [style.border-left-color]="cat.colorHex + ' !important'">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <!-- Icon & Color Tag -->
+          <div class="d-flex align-items-center gap-2">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" [style.background-color]="cat.colorHex" style="width: 36px; height: 36px;">
+              <i class="bi bi-{{ cat.icon || 'tag' }} fs-6"></i>
+            </div>
+            <div>
+              <h6 class="fw-bold text-dark mb-0">{{ cat.name }}</h6>
+              <span class="badge" [ngClass]="{
+                'badge-income': cat.type === 1,
+                'badge-fixed': cat.type === 2,
+                'badge-daily': cat.type === 3
+              }" style="font-size: 0.68rem;">
+                {{ cat.type === 1 ? 'Entrada' : (cat.type === 2 ? 'Saída Fixa' : 'Gasto Diário') }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions / Default Badge -->
+          <div *ngIf="!cat.isDefault" class="d-flex align-items-center gap-1">
+            <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="openEditModal(cat)" title="Editar Categoria">
+              <i class="bi bi-pencil text-secondary"></i>
+            </button>
+            <button class="btn btn-light btn-sm rounded-circle p-1 text-danger" style="width: 28px; height: 28px;" (click)="onDeleteCategory(cat)" title="Excluir Categoria">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+
+          <span *ngIf="cat.isDefault" class="badge bg-light text-muted border small" style="font-size: 0.65rem;">
+            Padrão
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal (Create / Edit) -->
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isModalOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-bottom py-3 px-4 bg-light">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <div class="rounded-circle d-flex align-items-center justify-content-center text-white" [style.background-color]="formColor" style="width: 28px; height: 28px;">
+            <i class="bi bi-{{ formIcon }}"></i>
+          </div>
+          <span>{{ modalTitle }}</span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()" aria-label="Close" [disabled]="modalLoading"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="modalError" class="alert alert-danger py-2 small d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ modalError }}</span>
+        </div>
+
+        <form (ngSubmit)="onSaveCategory()">
+          <!-- Nome da Categoria -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Nome da Categoria*</label>
+            <input type="text" class="form-control" [(ngModel)]="formName" name="formName" placeholder="Ex: Farmácia, Pet Shop, Freelance" required autofocus>
+          </div>
+
+          <!-- Tipo de Categoria -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Tipo de Movimentação</label>
+            <select class="form-select" [(ngModel)]="formType" name="formType">
+              <option [ngValue]="1">Entrada (Receitas / Ganhos)</option>
+              <option [ngValue]="2">Saída Fixa (Contas e Boletos)</option>
+              <option [ngValue]="3">Gasto Diário (Variáveis cotidianos)</option>
+            </select>
+          </div>
+
+          <!-- Seletor de Cores -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary d-flex justify-content-between align-items-center">
+              <span>Cor de Identificação</span>
+              <span class="badge" [style.background-color]="formColor" style="color: #ffffff;">{{ formColor }}</span>
+            </label>
+            <div class="d-flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                *ngFor="let c of colorPalette"
+                class="btn rounded-circle p-0 position-relative border"
+                [style.background-color]="c"
+                style="width: 30px; height: 30px;"
+                (click)="formColor = c">
+                <i *ngIf="formColor === c" class="bi bi-check text-white fw-bold position-absolute top-50 start-50 translate-middle"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Seletor de Ícones -->
+          <div class="mb-4">
+            <label class="form-label small fw-semibold text-secondary">Ícone Representativo</label>
+            <div class="d-flex flex-wrap gap-2 pt-1" style="max-height: 120px; overflow-y: auto;">
+              <button
+                type="button"
+                *ngFor="let icon of availableIcons"
+                class="btn btn-sm"
+                [ngClass]="formIcon === icon.id ? 'btn-dark text-white' : 'btn-light border'"
+                (click)="formIcon = icon.id"
+                [title]="icon.label">
+                <i class="bi bi-{{ icon.id }} me-1"></i>
+                <span style="font-size: 0.72rem;">{{ icon.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="modalLoading">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="modalLoading">
+              <span *ngIf="modalLoading" class="spinner-border spinner-border-sm me-2"></span>
+              <span>{{ editingCategoryId ? 'Salvar Alterações' : 'Criar Categoria' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

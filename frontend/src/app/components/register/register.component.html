@@ -1,0 +1,75 @@
+<div class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+  <div class="row w-100 justify-content-center">
+    <div class="col-12 col-md-8 col-lg-6 col-xl-5">
+      <div class="card card-finis p-4 p-md-5">
+        <div class="text-center mb-4">
+          <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center mb-2 shadow" style="width: 56px; height: 56px;">
+            <i class="bi bi-wallet2 fs-3"></i>
+          </div>
+          <h3 class="fw-bold text-dark mb-1">Criar Conta no finis</h3>
+          <p class="text-muted small">Configure seu saldo inicial e comece o controle financeiro</p>
+        </div>
+
+        <div *ngIf="errorMessage" class="alert alert-danger py-2 small d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <form (ngSubmit)="onSubmit()">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Nome Completo</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white text-muted"><i class="bi bi-person"></i></span>
+              <input type="text" class="form-control" [(ngModel)]="name" name="name" placeholder="Seu nome" required autofocus>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">E-mail</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope"></i></span>
+              <input type="email" class="form-control" [(ngModel)]="email" name="email" placeholder="seu@email.com" required>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Senha</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white text-muted"><i class="bi bi-lock"></i></span>
+              <input type="password" class="form-control" [(ngModel)]="password" name="password" placeholder="Mínimo 6 caracteres" required>
+            </div>
+          </div>
+
+          <!-- Saldo Inicial -->
+          <div class="mb-4 p-3 bg-light rounded-3 border">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <label class="form-label small fw-bold text-success mb-0">
+                <i class="bi bi-cash-stack me-1"></i> Saldo Inicial da sua Conta (R$)
+              </label>
+              <span class="badge bg-success-subtle text-success small">Partida do Termômetro</span>
+            </div>
+            <p class="text-muted" style="font-size: 0.78rem;">
+              Informe quanto você tem na conta bancária para iniciar os cálculos do seu saldo acumulado diário. Você poderá atualizar isso depois a qualquer momento.
+            </p>
+            <div class="input-group">
+              <span class="input-group-text bg-white fw-bold text-success">R$</span>
+              <input type="number" step="0.01" class="form-control mono-num fw-bold fs-5 text-dark" [(ngModel)]="initialBalance" name="initialBalance" placeholder="0,00">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success w-100 py-2 fw-semibold rounded-pill shadow-sm" [disabled]="loading">
+            <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+            <span>Cadastrar e Iniciar</span>
+          </button>
+        </form>
+
+        <div class="text-center mt-4 pt-3 border-top">
+          <p class="text-muted small mb-0">
+            Já possui uma conta?
+            <a routerLink="/login" class="text-success fw-semibold text-decoration-none">Fazer Login</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

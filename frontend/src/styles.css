@@ -1,0 +1,87 @@
+:root {
+  --finis-primary: #10B981;
+  --finis-primary-dark: #059669;
+  --finis-danger: #EF4444;
+  --finis-warning: #F59E0B;
+  --finis-info: #3B82F6;
+  --finis-dark: #1E293B;
+  --finis-card-bg: #FFFFFF;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1E293B;
+  background-color: #F8FAFC;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+/* Custom Card Shadows */
+.card-finis {
+  background: #FFFFFF;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 14px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.card-finis:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+}
+
+.badge-income {
+  background-color: #DCFCE7;
+  color: #166534;
+  font-weight: 600;
+}
+
+.badge-fixed {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  font-weight: 600;
+}
+
+.badge-daily {
+  background-color: #FEF3C7;
+  color: #92400E;
+  font-weight: 600;
+}
+
+.table-termometro tbody tr:hover {
+  background-color: #F1F5F9;
+  cursor: pointer;
+}
+
+.thermometer-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #E2E8F0;
+  overflow: hidden;
+}
+
+.thermometer-fill {
+  height: 100%;
+  transition: width 0.4s ease;
+}
+
+/* Clean Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

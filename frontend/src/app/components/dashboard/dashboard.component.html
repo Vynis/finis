@@ -1,0 +1,288 @@
+<div class="container-fluid px-md-4 py-4">
+  <!-- Top Bar: Navigation & Month Selector -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark">Dashboard Termômetro</h2>
+      <p class="text-muted small mb-0">Visão consolidada da sua saúde financeira diária e mensal</p>
+    </div>
+
+    <!-- Date selector -->
+    <div class="d-flex align-items-center gap-2 bg-white p-2 rounded-4 shadow-sm border">
+      <button class="btn btn-light btn-sm rounded-circle" (click)="changeMonth(-1)" title="Mês anterior">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+
+      <select class="form-select form-select-sm border-0 fw-bold" [ngModel]="selectedMonth" (ngModelChange)="onMonthSelect($event)" style="width: 130px;">
+        <option *ngFor="let m of months" [value]="m.value">{{ m.name }}</option>
+      </select>
+
+      <select class="form-select form-select-sm border-0 fw-bold" [ngModel]="selectedYear" (ngModelChange)="onYearSelect($event)" style="width: 90px;">
+        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+      </select>
+
+      <button class="btn btn-light btn-sm rounded-circle" (click)="changeMonth(1)" title="Próximo mês">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+
+      <button class="btn btn-outline-success btn-sm ms-2" (click)="loadDashboard()" [disabled]="loading" title="Atualizar">
+        <i class="bi bi-arrow-clockwise" [class.spin]="loading"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted small mt-2">Calculando fluxo de caixa e termômetro...</p>
+  </div>
+
+  <div *ngIf="!loading && summary">
+    <!-- Top KPI Cards Grid -->
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4">
+      <!-- Termômetro: Saldo Atual -->
+      <div class="col">
+        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="summary.currentBalance >= 0 ? 'border-success' : 'border-danger'">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold text-uppercase">Saldo em Conta</span>
+            <span class="badge" [ngClass]="summary.currentBalance >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
+              {{ summary.currentBalance >= 0 ? 'Positivo' : 'Alerta' }}
+            </span>
+          </div>
+          <h4 class="mono-num fw-bold mb-1" [ngClass]="summary.currentBalance >= 0 ? 'text-success' : 'text-danger'">
+            R$ {{ summary.currentBalance | number:'1.2-2' }}
+          </h4>
+          <span class="text-muted" style="font-size: 0.72rem;">
+            Partida: <strong>R$ {{ summary.initialBalance | number:'1.2-2' }}</strong>
+          </span>
+        </div>
+      </div>
+
+      <!-- Entradas -->
+      <div class="col">
+        <div class="card card-finis p-3 h-100 border-start border-4 border-emerald" style="border-left-color: #10B981 !important;">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold text-uppercase">Entradas</span>
+            <div class="rounded-circle bg-success-subtle text-success p-2 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+              <i class="bi bi-arrow-down-left"></i>
+            </div>
+          </div>
+          <h4 class="mono-num fw-bold text-dark mb-1">
+            R$ {{ summary.monthIncome | number:'1.2-2' }}
+          </h4>
+          <span class="text-muted" style="font-size: 0.72rem;">
+            Receitas do mês
+          </span>
+        </div>
+      </div>
+
+      <!-- Saída Total (Fixas + Diário) -->
+      <div class="col">
+        <div class="card card-finis p-3 h-100 border-start border-4 border-danger">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold text-uppercase">Saída em Conta</span>
+            <div class="rounded-circle bg-danger-subtle text-danger p-2 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+              <i class="bi bi-arrow-up-right"></i>
+            </div>
+          </div>
+          <h4 class="mono-num fw-bold text-danger mb-1">
+            R$ {{ summary.monthTotalExpenses | number:'1.2-2' }}
+          </h4>
+          <div class="d-flex gap-1 text-muted" style="font-size: 0.72rem;">
+            <span>Fixas: R$ {{ summary.monthFixedExpenses | number:'1.0-0' }}</span>
+            <span>•</span>
+            <span>Diário: R$ {{ summary.monthDailyExpenses | number:'1.0-0' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fatura de Cartões -->
+      <div class="col">
+        <div class="card card-finis p-3 h-100 border-start border-4" style="border-left-color: #8A05BE !important;">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold text-uppercase">Faturas Cartão</span>
+            <a routerLink="/cartoes" class="rounded-circle p-1 d-flex align-items-center justify-content-center text-decoration-none" style="width: 28px; height: 28px; background-color: #F3E8FF; color: #8A05BE;" title="Ver faturas detalhadas">
+              <i class="bi bi-credit-card"></i>
+            </a>
+          </div>
+          <h4 class="mono-num fw-bold mb-1" style="color: #8A05BE;">
+            R$ {{ (summary.monthCreditCardTotal || 0) | number:'1.2-2' }}
+          </h4>
+          <div class="d-flex justify-content-between align-items-center" style="font-size: 0.72rem;">
+            <span class="text-muted">Total faturas</span>
+            <a routerLink="/cartoes" class="text-decoration-none fw-semibold" style="color: #8A05BE;">Ver</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance (Sobra / Economia) -->
+      <div class="col">
+        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="summary.monthPerformance >= 0 ? 'border-primary' : 'border-warning'">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <span class="text-muted small fw-semibold text-uppercase">Performance</span>
+            <span class="badge bg-primary-subtle text-primary" style="font-size: 0.65rem;">
+              {{ summary.monthSavingsRate }}% taxa
+            </span>
+          </div>
+          <h4 class="mono-num fw-bold mb-1" [ngClass]="summary.monthPerformance >= 0 ? 'text-primary' : 'text-warning'">
+            R$ {{ summary.monthPerformance | number:'1.2-2' }}
+          </h4>
+          <span class="text-muted" style="font-size: 0.72rem;">
+            {{ summary.monthPerformance >= 0 ? 'Superávit no mês' : 'Déficit no mês' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart & Category Breakdown Row -->
+    <div class="row g-3 mb-4">
+      <!-- Thermometer Trend Chart -->
+      <div class="col-12 col-lg-8">
+        <div class="card card-finis p-4 h-100">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-graph-up text-success me-1"></i> Curva do Saldo Diário (Termômetro)
+              </h5>
+              <span class="text-muted small">Evolução do saldo de caixa ao longo dos dias de {{ summary.monthName }}</span>
+            </div>
+            <a routerLink="/termometro" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+              Ver Planilha Completa <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+          </div>
+
+          <!-- SVG Visual Line Chart -->
+          <div class="w-100 overflow-hidden py-2" style="height: 240px; position: relative;">
+            <svg viewBox="0 0 800 220" class="w-100 h-100">
+              <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#10B981" stop-opacity="0.25"/>
+                  <stop offset="100%" stop-color="#10B981" stop-opacity="0.0"/>
+                </linearGradient>
+              </defs>
+
+              <!-- Zero reference line -->
+              <line x1="20" y1="180" x2="780" y2="180" stroke="#E2E8F0" stroke-dasharray="4" stroke-width="1" />
+
+              <!-- Polyline of daily balances -->
+              <polyline
+                fill="none"
+                stroke="#10B981"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [attr.points]="getChartPoints()" />
+            </svg>
+          </div>
+
+          <div class="d-flex justify-content-between text-muted small px-2 border-top pt-2">
+            <span>Dia 1 (Início: R$ {{ summary.initialBalance | number:'1.2-2' }})</span>
+            <span>Dia {{ summary.dailyTrend.length }} (Final: R$ {{ (summary.dailyTrend[summary.dailyTrend.length - 1].balance || 0) | number:'1.2-2' }})</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categories Distribution -->
+      <div class="col-12 col-lg-4">
+        <div class="card card-finis p-4 h-100">
+          <h5 class="fw-bold mb-1 text-dark">
+            <i class="bi bi-pie-chart text-primary me-1"></i> Gastos por Categoria
+          </h5>
+          <span class="text-muted small mb-3">Onde foi o seu dinheiro este mês</span>
+
+          <div *ngIf="summary.categoryDistribution.length === 0" class="text-center py-4 text-muted small">
+            Nenhuma despesa registrada neste mês ainda.
+          </div>
+
+          <div *ngFor="let cat of summary.categoryDistribution" class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="fw-semibold text-secondary">{{ cat.categoryName }}</span>
+              <span class="mono-num text-dark fw-bold">R$ {{ cat.totalAmount | number:'1.2-2' }} ({{ cat.percentage }}%)</span>
+            </div>
+            <div class="progress" style="height: 6px;">
+              <div class="progress-bar rounded" [style.width.%]="cat.percentage" [style.background-color]="cat.colorHex"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Transactions & Quick Action -->
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="card card-finis p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0 text-dark">
+              <i class="bi bi-clock-history text-secondary me-1"></i> Últimos Lançamentos
+            </h5>
+            <a routerLink="/termometro" class="btn btn-sm btn-link text-success text-decoration-none fw-semibold">
+              Ver todos na grade diária
+            </a>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr class="small text-muted text-uppercase">
+                  <th>Data</th>
+                  <th>Tipo</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Forma</th>
+                  <th class="text-end">Valor</th>
+                  <th class="text-center" style="width: 90px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngIf="summary.recentTransactions.length === 0">
+                  <td colspan="7" class="text-center py-4 text-muted small">
+                    Nenhuma transação cadastrada. Clique no botão <strong>+ Novo Lançamento</strong> para adicionar!
+                  </td>
+                </tr>
+                <tr *ngFor="let t of summary.recentTransactions">
+                  <td class="mono-num small">{{ t.date | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <span class="badge" [ngClass]="{
+                      'badge-income': t.type === 1,
+                      'badge-fixed': t.type === 2,
+                      'badge-daily': t.type === 3
+                    }">
+                      {{ t.type === 1 ? 'Entrada' : (t.type === 2 ? 'Saída Fixa' : 'Gasto Diário') }}
+                    </span>
+                  </td>
+                  <td class="fw-semibold text-dark">{{ t.description }}</td>
+                  <td>
+                    <span class="badge rounded-pill text-white px-2 py-1 small" [style.background-color]="t.categoryColor">
+                      {{ t.categoryName }}
+                    </span>
+                  </td>
+                  <td class="small text-muted">
+                    <span *ngIf="t.paymentMethod === 2" class="d-inline-flex align-items-center gap-1">
+                      <i class="bi bi-credit-card-2-front text-primary"></i>
+                      <span class="fw-semibold text-dark">{{ t.creditCardName || 'Cartão' }}</span>
+                      <span *ngIf="t.installmentNumber && t.totalInstallments" class="badge bg-light text-secondary border">
+                        {{ t.installmentNumber }}/{{ t.totalInstallments }}
+                      </span>
+                    </span>
+                    <span *ngIf="t.paymentMethod !== 2">{{ t.paymentMethodName }}</span>
+                  </td>
+                  <td class="mono-num fw-bold text-end" [ngClass]="t.type === 1 ? 'text-success' : 'text-danger'">
+                    {{ t.type === 1 ? '+' : '-' }} R$ {{ t.amount | number:'1.2-2' }}
+                  </td>
+                  <td class="text-center">
+                    <div class="d-flex align-items-center justify-content-center gap-1">
+                      <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="onEdit(t)" title="Editar Lançamento">
+                        <i class="bi bi-pencil text-secondary"></i>
+                      </button>
+                      <button class="btn btn-light btn-sm rounded-circle p-1 text-danger" style="width: 28px; height: 28px;" (click)="onDelete(t)" title="Excluir Lançamento">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

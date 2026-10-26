@@ -1,0 +1,189 @@
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <!-- Modal Header -->
+      <div class="modal-header border-bottom py-3 px-4" [ngClass]="{
+        'bg-success-subtle': type === 1,
+        'bg-danger-subtle': type === 2,
+        'bg-warning-subtle': type === 3
+      }">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <i class="bi" [ngClass]="{
+            'bi-arrow-down-left text-success': type === 1,
+            'bi-calendar-check text-danger': type === 2,
+            'bi-cart3 text-warning': type === 3
+          }"></i>
+          <span>{{ transactionToEdit ? 'Editar Lançamento' : 'Novo Lançamento' }}</span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="alert alert-danger py-2 small d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <!-- Transaction Type Switcher Buttons -->
+        <div class="mb-4">
+          <label class="form-label small fw-semibold text-secondary">Tipo de Movimentação</label>
+          <div class="btn-group w-100 shadow-sm" role="group">
+            <button type="button" class="btn fw-semibold" [ngClass]="type === 1 ? 'btn-success' : 'btn-outline-secondary'" (click)="onTypeChange(1)">
+              <i class="bi bi-plus-lg me-1"></i> Entrada
+            </button>
+            <button type="button" class="btn fw-semibold" [ngClass]="type === 2 ? 'btn-danger' : 'btn-outline-secondary'" (click)="onTypeChange(2)">
+              <i class="bi bi-calendar-event me-1"></i> Saída Fixa
+            </button>
+            <button type="button" class="btn fw-semibold" [ngClass]="type === 3 ? 'btn-warning text-dark' : 'btn-outline-secondary'" (click)="onTypeChange(3)">
+              <i class="bi bi-cart me-1"></i> Diário
+            </button>
+          </div>
+        </div>
+
+        <form (ngSubmit)="onSubmit()">
+          <!-- Valor & Data -->
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Valor (R$)*</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white fw-bold text-secondary">R$</span>
+                <input type="number" step="0.01" class="form-control mono-num fw-bold fs-5 text-dark" [(ngModel)]="amount" name="amount" placeholder="0,00" required autofocus>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Data do Lançamento*</label>
+              <input type="date" class="form-control" [(ngModel)]="date" name="date" required>
+            </div>
+          </div>
+
+          <!-- Descrição -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Descrição*</label>
+            <input type="text" class="form-control" [(ngModel)]="description" name="description" placeholder="Ex: Supermercado Assaí, Salário, Internet" required>
+          </div>
+
+          <!-- Categoria & Forma de Pagamento -->
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary d-flex justify-content-between align-items-center">
+                <span>Categoria</span>
+                <a routerLink="/categorias" (click)="closeModal()" class="text-success text-decoration-none" style="font-size: 0.72rem;">
+                  <i class="bi bi-gear me-1"></i> Gerenciar
+                </a>
+              </label>
+              <select class="form-select" [(ngModel)]="categoryId" name="categoryId">
+                <option [ngValue]="null">-- Sem Categoria --</option>
+                <option *ngFor="let c of filteredCategories" [ngValue]="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary">Forma de Pagamento</label>
+              <select class="form-select" [(ngModel)]="paymentMethod" name="paymentMethod">
+                <option [ngValue]="1">Pix</option>
+                <option [ngValue]="2">Cartão de Crédito</option>
+                <option [ngValue]="3">Cartão de Débito</option>
+                <option [ngValue]="4">Dinheiro Físico</option>
+                <option [ngValue]="5">Boleto Bancário</option>
+                <option [ngValue]="6">Transferência</option>
+                <option [ngValue]="7">Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Opções Especiais de Cartão de Crédito -->
+          <div *ngIf="paymentMethod === 2" class="p-3 mb-3 bg-light rounded-3 border border-primary-subtle">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small fw-bold text-primary">
+                <i class="bi bi-credit-card-2-front me-1"></i> Detalhes do Cartão
+              </span>
+              <a routerLink="/cartoes" (click)="closeModal()" class="text-primary text-decoration-none small" style="font-size: 0.75rem;">
+                <i class="bi bi-gear me-1"></i> Gerenciar Cartões
+              </a>
+            </div>
+
+            <div class="row g-2">
+              <div class="col-7">
+                <label class="form-label small text-muted mb-1">Qual cartão?</label>
+                <select *ngIf="creditCards.length > 0" class="form-select form-select-sm" [(ngModel)]="creditCardId" name="creditCardId">
+                  <option *ngFor="let card of creditCards" [ngValue]="card.id">
+                    {{ card.name }} (Vence dia {{ card.dueDay }})
+                  </option>
+                </select>
+                <div *ngIf="creditCards.length === 0" class="small text-danger">
+                  Nenhum cartão cadastrado! <a routerLink="/cartoes" (click)="closeModal()" class="text-decoration-underline">Cadastrar agora</a>.
+                </div>
+              </div>
+
+              <div class="col-5">
+                <label class="form-label small text-muted mb-1">Parcelas</label>
+                <select class="form-select form-select-sm" [(ngModel)]="installments" name="installments" [disabled]="!!transactionToEdit">
+                  <option [ngValue]="1">1x à vista</option>
+                  <option [ngValue]="2">2x</option>
+                  <option [ngValue]="3">3x</option>
+                  <option [ngValue]="4">4x</option>
+                  <option [ngValue]="5">5x</option>
+                  <option [ngValue]="6">6x</option>
+                  <option [ngValue]="7">7x</option>
+                  <option [ngValue]="8">8x</option>
+                  <option [ngValue]="9">9x</option>
+                  <option [ngValue]="10">10x</option>
+                  <option [ngValue]="12">12x</option>
+                  <option [ngValue]="18">18x</option>
+                  <option [ngValue]="24">24x</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mt-2 small text-muted d-flex align-items-center gap-1">
+              <i class="bi bi-info-circle text-primary"></i>
+              <span>
+                {{ installments > 1 ? (getInstallmentPreview() + ' • ') : '' }}
+                Compras no cartão <strong>não debitam do saldo hoje</strong>. Entram na fatura do mês de vencimento!
+              </span>
+            </div>
+          </div>
+
+          <!-- Status da Transação -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Status</label>
+            <div class="d-flex gap-4">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" [value]="1" [(ngModel)]="status" id="statusRealizado">
+                <label class="form-check-label small" for="statusRealizado">
+                  <span class="badge bg-success-subtle text-success me-1">Realizado</span> (Já compensou)
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="status" [value]="2" [(ngModel)]="status" id="statusPrevisto">
+                <label class="form-check-label small" for="statusPrevisto">
+                  <span class="badge bg-secondary-subtle text-secondary me-1">Previsto</span> (Programado)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observações -->
+          <div class="mb-4">
+            <label class="form-label small fw-semibold text-secondary">Observações (Opcional)</label>
+            <textarea class="form-control" rows="2" [(ngModel)]="notes" name="notes" placeholder="Detalhes adicionais..."></textarea>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="loading">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="loading">
+              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+              <span>{{ transactionToEdit ? 'Salvar Alterações' : 'Salvar no Termômetro' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,80 @@
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isOpen" style="background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(5px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <!-- Modal Header Danger -->
+      <div class="modal-header bg-danger text-white py-3 px-4">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+          <span>Reiniciar Sistema ao Zero</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" (click)="closeModal()" aria-label="Close" [disabled]="loading"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body p-4">
+        <!-- Success Alert -->
+        <div *ngIf="successMessage" class="alert alert-success py-3 d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle-fill fs-5"></i>
+          <span class="small fw-semibold">{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Alert -->
+        <div *ngIf="errorMessage" class="alert alert-danger py-2 small d-flex align-items-center gap-2">
+          <i class="bi bi-x-circle-fill"></i>
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <div *ngIf="!successMessage">
+          <!-- Danger Alert Box -->
+          <div class="p-3 bg-danger-subtle border border-danger-subtle rounded-3 mb-3">
+            <h6 class="fw-bold text-danger mb-2">
+              <i class="bi bi-shield-exclamation me-1"></i> Atenção: Esta ação é definitiva e irreversível!
+            </h6>
+            <p class="small text-danger mb-2">
+              Ao confirmar, você estará excluindo definitivamente da sua conta:
+            </p>
+            <ul class="small text-danger ps-3 mb-0">
+              <li><strong>Todos os lançamentos</strong> de receitas, contas fixas e gastos diários.</li>
+              <li><strong>Histórico completo do termômetro</strong> de todos os meses e anos.</li>
+              <li><strong>Categorias personalizadas</strong> criadas por você.</li>
+              <li>O <strong>Saldo Inicial</strong> será redefinido para <strong>R$ 0,00</strong>.</li>
+            </ul>
+          </div>
+
+          <p class="text-secondary small mb-3">
+            Para evitar exclusões acidentais, digite a palavra <strong class="text-danger">ZERAR</strong> no campo abaixo para habilitar a confirmação:
+          </p>
+
+          <form (ngSubmit)="onConfirmReset()">
+            <div class="mb-4">
+              <input
+                type="text"
+                class="form-control form-control-lg text-center fw-bold letter-spacing-2"
+                style="letter-spacing: 3px;"
+                placeholder="DIGITE ZERAR"
+                [(ngModel)]="confirmWord"
+                name="confirmWord"
+                autocomplete="off"
+                autofocus
+                [disabled]="loading">
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+              <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="loading">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="btn btn-danger rounded-pill px-4 fw-semibold shadow-sm"
+                [disabled]="confirmWord.trim().toUpperCase() !== 'ZERAR' || loading">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+                <i *ngIf="!loading" class="bi bi-trash3-fill me-1"></i>
+                <span>Apagar Tudo e Zerar</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

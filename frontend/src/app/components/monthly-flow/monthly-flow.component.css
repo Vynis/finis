@@ -1,0 +1,5 @@
+/* Monthly flow custom table styles */
+.table-termometro th {
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}

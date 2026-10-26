@@ -1,0 +1,43 @@
+<div class="d-flex flex-column min-vh-100">
+  <!-- Top Navigation Bar -->
+  <app-navbar
+    (openNewTransaction)="openNewTransaction()"
+    (openBalanceModal)="openBalanceModal()"
+    (openResetModal)="openResetModal()">
+  </app-navbar>
+
+  <!-- Main Routed Content -->
+  <main class="flex-grow-1">
+    <router-outlet (activate)="onRouterActivate($event)"></router-outlet>
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="bg-white border-top py-3 text-center text-muted small mt-auto">
+    <div class="container">
+      <span><strong>finis</strong> &copy; 2026 • Sistema de Controle Financeiro & Termômetro Diário</span>
+    </div>
+  </footer>
+
+  <!-- Global Transaction Modal -->
+  <app-transaction-modal
+    [isOpen]="isTransactionModalOpen"
+    [transactionToEdit]="transactionToEdit"
+    [initialDate]="initialDate"
+    (close)="closeTransactionModal()"
+    (saved)="onTransactionSaved()">
+  </app-transaction-modal>
+
+  <!-- Global Initial Balance Adjustment Modal -->
+  <app-initial-balance-modal
+    [isOpen]="isBalanceModalOpen"
+    (close)="closeBalanceModal()"
+    (updated)="onBalanceUpdated()">
+  </app-initial-balance-modal>
+
+  <!-- Global Reset Data Modal -->
+  <app-reset-modal
+    [isOpen]="isResetModalOpen"
+    (close)="closeResetModal()"
+    (resetCompleted)="onResetCompleted()">
+  </app-reset-modal>
+</div>

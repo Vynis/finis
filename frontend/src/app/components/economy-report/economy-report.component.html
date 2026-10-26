@@ -1,0 +1,150 @@
+<div class="container-fluid px-md-4 py-4">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h2 class="fw-bold mb-0 text-dark">Relatório de Economia Anual</h2>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Metas & Poupança</span>
+      </div>
+      <p class="text-muted small mb-0">Consolidação dos 12 meses de {{ selectedYear }} com apuração da taxa de poupança</p>
+    </div>
+
+    <!-- Year selector -->
+    <div class="d-flex align-items-center gap-2 bg-white p-2 rounded-4 shadow-sm border">
+      <span class="small fw-semibold text-muted ms-2">Exercício:</span>
+      <select class="form-select form-select-sm border-0 fw-bold" [ngModel]="selectedYear" (ngModelChange)="onYearChange($event)" style="width: 100px;">
+        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+      </select>
+      <button class="btn btn-outline-success btn-sm ms-2" (click)="loadEconomyReport()" [disabled]="loading" title="Recarregar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted small mt-2">Consolidando os 12 meses do ano...</p>
+  </div>
+
+  <div *ngIf="!loading && economy">
+    <!-- Annual KPI Cards -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card card-finis p-3 h-100 border-start border-4 border-secondary">
+          <span class="text-muted small fw-semibold text-uppercase">Saldo Inicial do Ano</span>
+          <h3 class="mono-num fw-bold text-dark my-1">
+            R$ {{ economy.initialBalanceOfYear | number:'1.2-2' }}
+          </h3>
+          <span class="text-muted" style="font-size: 0.75rem;">1º de Janeiro de {{ economy.year }}</span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card card-finis p-3 h-100 border-start border-4 border-success">
+          <span class="text-muted small fw-semibold text-uppercase">Total Recebido no Ano</span>
+          <h3 class="mono-num fw-bold text-success my-1">
+            R$ {{ economy.totalIncome | number:'1.2-2' }}
+          </h3>
+          <span class="text-muted" style="font-size: 0.75rem;">Soma de todas as entradas do ano</span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="economy.totalPerformance >= 0 ? 'border-primary' : 'border-danger'">
+          <span class="text-muted small fw-semibold text-uppercase">Total Economizado (Sobra)</span>
+          <h3 class="mono-num fw-bold my-1" [ngClass]="economy.totalPerformance >= 0 ? 'text-primary' : 'text-danger'">
+            R$ {{ economy.totalPerformance | number:'1.2-2' }}
+          </h3>
+          <span class="badge bg-primary-subtle text-primary">
+            {{ economy.overallSavingsRate }}% taxa média anual
+          </span>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-xl-3">
+        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="economy.endOfYearBalance >= 0 ? 'border-success' : 'border-danger'">
+          <span class="text-muted small fw-semibold text-uppercase">Saldo em 31 de Dezembro</span>
+          <h3 class="mono-num fw-bold my-1" [ngClass]="economy.endOfYearBalance >= 0 ? 'text-success' : 'text-danger'">
+            R$ {{ economy.endOfYearBalance | number:'1.2-2' }}
+          </h3>
+          <span class="text-muted" style="font-size: 0.75rem;">Encerramento projetado do ano</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Annual Months Table (Idêntica à aba Economia) -->
+    <div class="card card-finis p-0 overflow-hidden mb-4">
+      <div class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+          <i class="bi bi-table text-primary me-2"></i> Tabela Mensal de Economia & Desempenho
+        </h5>
+        <span class="text-muted small">Mapeado da aba "Economia" da planilha</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr class="small text-muted text-uppercase">
+              <th>Mês</th>
+              <th class="text-end">Entradas (R$)</th>
+              <th class="text-end">Saída Total (R$)</th>
+              <th class="text-end">Economia / Sobra (R$)</th>
+              <th class="text-center" style="width: 220px;">Taxa de Poupança (%)</th>
+              <th class="text-end">Saldo de Encerramento (R$)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of economy.months">
+              <td class="fw-bold text-dark">{{ m.monthName }}</td>
+
+              <!-- Entradas -->
+              <td class="text-end mono-num" [ngClass]="m.totalIncome > 0 ? 'text-success fw-semibold' : 'text-muted'">
+                {{ m.totalIncome > 0 ? ('R$ ' + (m.totalIncome | number:'1.2-2')) : '-' }}
+              </td>
+
+              <!-- Saídas -->
+              <td class="text-end mono-num" [ngClass]="m.totalExpenses > 0 ? 'text-danger' : 'text-muted'">
+                {{ m.totalExpenses > 0 ? ('R$ ' + (m.totalExpenses | number:'1.2-2')) : '-' }}
+              </td>
+
+              <!-- Economia / Performance -->
+              <td class="text-end mono-num fw-bold" [ngClass]="m.performance >= 0 ? 'text-primary' : 'text-danger'">
+                R$ {{ m.performance | number:'1.2-2' }}
+              </td>
+
+              <!-- Taxa de Poupança com Barra -->
+              <td class="text-center">
+                <div class="d-flex align-items-center gap-2 justify-content-center">
+                  <div class="progress flex-grow-1" style="height: 6px;">
+                    <div class="progress-bar" [ngClass]="m.savingsRate >= 20 ? 'bg-success' : (m.savingsRate >= 10 ? 'bg-primary' : 'bg-warning')" [style.width.%]="m.savingsRate > 0 ? m.savingsRate : 0"></div>
+                  </div>
+                  <span class="mono-num fw-bold small" style="min-width: 45px;">
+                    {{ m.savingsRate }}%
+                  </span>
+                </div>
+              </td>
+
+              <!-- Saldo de Encerramento -->
+              <td class="text-end mono-num fw-bold fs-6" [ngClass]="m.endOfMonthBalance >= 0 ? 'text-success' : 'text-danger'">
+                R$ {{ m.endOfMonthBalance | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tbody>
+
+          <!-- TOTAL GERAL -->
+          <tfoot class="table-dark">
+            <tr class="fw-bold">
+              <td>TOTAL ANUAL</td>
+              <td class="text-end mono-num text-success">R$ {{ economy.totalIncome | number:'1.2-2' }}</td>
+              <td class="text-end mono-num text-danger">R$ {{ economy.totalExpenses | number:'1.2-2' }}</td>
+              <td class="text-end mono-num text-primary">R$ {{ economy.totalPerformance | number:'1.2-2' }}</td>
+              <td class="text-center mono-num text-warning fs-6">{{ economy.overallSavingsRate }}%</td>
+              <td class="text-end mono-num fs-5" [ngClass]="economy.endOfYearBalance >= 0 ? 'text-success' : 'text-danger'">
+                R$ {{ economy.endOfYearBalance | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

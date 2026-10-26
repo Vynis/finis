@@ -1,0 +1,276 @@
+<div class="container-fluid px-md-4 py-4">
+  <!-- Top Bar: Title & Selectors -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h2 class="fw-bold mb-0 text-dark">Planilha Termômetro</h2>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Fluxo Diário Contínuo</span>
+      </div>
+      <p class="text-muted small mb-0">Controle do saldo dia a dia com carry-over automático entre os meses</p>
+    </div>
+
+    <!-- Navigation between months -->
+    <div class="d-flex align-items-center gap-2 bg-white p-2 rounded-4 shadow-sm border">
+      <button class="btn btn-light btn-sm rounded-circle" (click)="changeMonth(-1)" title="Mês anterior">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+
+      <select class="form-select form-select-sm border-0 fw-bold" [ngModel]="selectedMonth" (ngModelChange)="onMonthSelect($event)" style="width: 130px;">
+        <option *ngFor="let m of months" [value]="m.value">{{ m.name }}</option>
+      </select>
+
+      <select class="form-select form-select-sm border-0 fw-bold" [ngModel]="selectedYear" (ngModelChange)="onYearSelect($event)" style="width: 90px;">
+        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+      </select>
+
+      <button class="btn btn-light btn-sm rounded-circle" (click)="changeMonth(1)" title="Próximo mês">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+
+      <button class="btn btn-outline-success btn-sm ms-2" (click)="loadMonthlyFlow()" [disabled]="loading" title="Recarregar">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted small mt-2">Carregando movimentações do mês...</p>
+  </div>
+
+  <div *ngIf="!loading && flow">
+    <!-- Month Summary Header Cards -->
+    <div class="row g-2 mb-4">
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100">
+          <span class="text-muted" style="font-size: 0.72rem;">SALDO INICIAL</span>
+          <span class="mono-num fw-bold text-dark fs-6">R$ {{ flow.initialBalance | number:'1.2-2' }}</span>
+          <span class="text-muted" style="font-size: 0.65rem;">Mês anterior</span>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100 border-top border-3 border-success">
+          <span class="text-muted" style="font-size: 0.72rem;">ENTRADAS</span>
+          <span class="mono-num fw-bold text-success fs-6">R$ {{ flow.totalIncome | number:'1.2-2' }}</span>
+          <span class="text-muted" style="font-size: 0.65rem;">Total recebido</span>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100 border-top border-3 border-danger">
+          <span class="text-muted" style="font-size: 0.72rem;">SAÍDAS FIXAS</span>
+          <span class="mono-num fw-bold text-danger fs-6">R$ {{ flow.totalFixedExpenses | number:'1.2-2' }}</span>
+          <span class="text-muted" style="font-size: 0.65rem;">Contas e boletos</span>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100 border-top border-3 border-warning">
+          <span class="text-muted" style="font-size: 0.72rem;">GASTOS DIÁRIOS</span>
+          <span class="mono-num fw-bold text-warning fs-6">R$ {{ flow.totalDailyExpenses | number:'1.2-2' }}</span>
+          <span class="text-muted" style="font-size: 0.65rem;">Variáveis cotidianos</span>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100">
+          <span class="text-muted" style="font-size: 0.72rem;">SAÍDA TOTAL</span>
+          <span class="mono-num fw-bold text-dark fs-6">R$ {{ flow.totalExpenses | number:'1.2-2' }}</span>
+          <span class="text-muted" style="font-size: 0.65rem;">Fixas + Diário</span>
+        </div>
+      </div>
+
+      <div class="col-6 col-md-4 col-xl-2">
+        <div class="card card-finis p-2 text-center h-100 border-top border-3" [ngClass]="flow.performance >= 0 ? 'border-primary' : 'border-danger'">
+          <span class="text-muted" style="font-size: 0.72rem;">PERFORMANCE (SOBRA)</span>
+          <span class="mono-num fw-bold fs-6" [ngClass]="flow.performance >= 0 ? 'text-primary' : 'text-danger'">
+            R$ {{ flow.performance | number:'1.2-2' }}
+          </span>
+          <span class="badge bg-primary-subtle text-primary" style="font-size: 0.65rem;">{{ flow.savingsRate }}% poupado</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Daily Termômetro Grid -->
+    <div class="card card-finis p-0 overflow-hidden mb-4">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 table-termometro">
+          <thead class="table-dark">
+            <tr class="text-uppercase small">
+              <th style="width: 150px;">Data</th>
+              <th class="text-end" style="width: 140px;">Entrada</th>
+              <th class="text-end" style="width: 140px;">Saída Fixa</th>
+              <th class="text-end" style="width: 140px;">Gasto Diário</th>
+              <th class="text-end" style="width: 140px;">Saída do Dia</th>
+              <th class="text-end" style="width: 180px;">Saldo Acumulado</th>
+              <th class="text-center" style="width: 120px;">Lançamentos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let day of flow.days">
+              <tr (click)="toggleDay(day)" [ngClass]="{
+                'table-warning': isToday(day.date),
+                'bg-light text-muted': isWeekend(day.dayOfWeek) && !isToday(day.date)
+              }">
+                <!-- Data & Dia da Semana -->
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-secondary rounded-pill mono-num" style="width: 28px;">{{ day.day }}</span>
+                    <div>
+                      <div class="fw-semibold small">{{ day.dayOfWeek }}</div>
+                      <div *ngIf="isToday(day.date)" class="badge bg-warning text-dark" style="font-size: 0.62rem;">HOJE</div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Entrada -->
+                <td class="text-end mono-num" [ngClass]="day.totalIncome > 0 ? 'text-success fw-bold' : 'text-muted'">
+                  {{ day.totalIncome > 0 ? ('R$ ' + (day.totalIncome | number:'1.2-2')) : '-' }}
+                </td>
+
+                <!-- Saída Fixa -->
+                <td class="text-end mono-num" [ngClass]="day.totalFixedExpenses > 0 ? 'text-danger fw-semibold' : 'text-muted'">
+                  {{ day.totalFixedExpenses > 0 ? ('R$ ' + (day.totalFixedExpenses | number:'1.2-2')) : '-' }}
+                </td>
+
+                <!-- Gasto Diário -->
+                <td class="text-end mono-num" [ngClass]="day.totalDailyExpenses > 0 ? 'text-warning fw-semibold' : 'text-muted'">
+                  {{ day.totalDailyExpenses > 0 ? ('R$ ' + (day.totalDailyExpenses | number:'1.2-2')) : '-' }}
+                </td>
+
+                <!-- Saída do Dia -->
+                <td class="text-end mono-num" [ngClass]="day.totalExpenses > 0 ? 'text-dark fw-bold' : 'text-muted'">
+                  {{ day.totalExpenses > 0 ? ('R$ ' + (day.totalExpenses | number:'1.2-2')) : '-' }}
+                </td>
+
+                <!-- Saldo Acumulado (Termômetro) -->
+                <td class="text-end mono-num fw-bold fs-6" [ngClass]="day.cumulativeBalance >= 0 ? 'text-success' : 'text-danger'">
+                  <div class="d-flex align-items-center justify-content-end gap-1">
+                    <i class="bi" [ngClass]="day.cumulativeBalance >= 0 ? 'bi-thermometer-half text-success' : 'bi-thermometer-snow text-danger'"></i>
+                    <span>R$ {{ day.cumulativeBalance | number:'1.2-2' }}</span>
+                  </div>
+                </td>
+
+                <!-- Botões e Ações -->
+                <td class="text-center" (click)="$event.stopPropagation()">
+                  <div class="d-flex align-items-center justify-content-center gap-1">
+                    <!-- Botão adicionar no dia -->
+                    <button class="btn btn-outline-success btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="onAddForDay(day, $event)" title="Adicionar lançamento no dia {{ day.day }}">
+                      <i class="bi bi-plus"></i>
+                    </button>
+
+                    <!-- Expandir se houver transações -->
+                    <button *ngIf="day.transactionsCount > 0" class="btn btn-light btn-sm rounded-circle p-1 text-muted" style="width: 28px; height: 28px;" (click)="toggleDay(day)" title="Ver {{ day.transactionsCount }} lançamento(s)">
+                      <i class="bi" [ngClass]="day.expanded ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                    <span *ngIf="day.transactionsCount === 0" class="text-muted" style="font-size: 0.7rem; width: 28px;">-</span>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Sub-linha expandida com os lançamentos do dia -->
+              <tr *ngIf="day.expanded && day.transactionsCount > 0" class="bg-white">
+                <td colspan="7" class="p-3 bg-light-subtle">
+                  <div class="card card-finis p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                      <span class="small fw-bold text-dark">
+                        <i class="bi bi-list-check me-1"></i> Detalhes dos Gastos do Dia {{ day.day }} de {{ flow.monthName }}
+                      </span>
+                      <button class="btn btn-sm btn-outline-success rounded-pill py-0 px-2 small" (click)="onAddForDay(day, $event)">
+                        <i class="bi bi-plus"></i> Adicionar outro neste dia
+                      </button>
+                    </div>
+
+                    <div class="table-responsive">
+                      <table class="table table-sm table-borderless align-middle mb-0">
+                        <thead class="small text-muted text-uppercase border-bottom">
+                          <tr>
+                            <th>Tipo</th>
+                            <th>Categoria</th>
+                            <th>Descrição</th>
+                            <th>Forma</th>
+                            <th>Status</th>
+                            <th class="text-end">Valor</th>
+                            <th class="text-end" style="width: 100px;">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr *ngFor="let t of day.transactions" class="border-bottom">
+                            <td>
+                              <span class="badge" [ngClass]="{
+                                'badge-income': t.type === 1,
+                                'badge-fixed': t.type === 2,
+                                'badge-daily': t.type === 3
+                              }">
+                                {{ t.type === 1 ? 'Entrada' : (t.type === 2 ? 'Saída Fixa' : 'Gasto Diário') }}
+                              </span>
+                            </td>
+                            <td>
+                              <span class="badge rounded-pill text-white px-2 py-1" [style.background-color]="t.categoryColor">
+                                {{ t.categoryName }}
+                              </span>
+                            </td>
+                            <td class="fw-semibold text-dark">{{ t.description }}</td>
+                            <td class="small text-muted">
+                              <span *ngIf="t.paymentMethod === 2" class="d-inline-flex align-items-center gap-1">
+                                <i class="bi bi-credit-card-2-front text-primary"></i>
+                                <span class="fw-semibold text-dark">{{ t.creditCardName || 'Cartão' }}</span>
+                                <span *ngIf="t.installmentNumber && t.totalInstallments" class="badge bg-light text-secondary border">
+                                  {{ t.installmentNumber }}/{{ t.totalInstallments }}
+                                </span>
+                              </span>
+                              <span *ngIf="t.paymentMethod !== 2">{{ t.paymentMethodName }}</span>
+                            </td>
+                            <td>
+                              <span class="badge" [ngClass]="t.status === 1 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
+                                {{ t.statusName }}
+                              </span>
+                            </td>
+                            <td class="mono-num fw-bold text-end" [ngClass]="t.type === 1 ? 'text-success' : 'text-danger'">
+                              {{ t.type === 1 ? '+' : '-' }} R$ {{ t.amount | number:'1.2-2' }}
+                            </td>
+                            <td class="text-end">
+                              <ng-container *ngIf="t.id > 0">
+                                <button class="btn btn-link btn-sm text-secondary p-1" (click)="onEdit(t, $event)" title="Editar">
+                                  <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-link btn-sm text-danger p-1" (click)="onDelete(t, $event)" title="Excluir">
+                                  <i class="bi bi-trash"></i>
+                                </button>
+                              </ng-container>
+                              <ng-container *ngIf="t.id < 0">
+                                <a routerLink="/cartoes" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size: 0.72rem;">
+                                  Ver Fatura
+                                </a>
+                              </ng-container>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+
+          <!-- Rodapé de Totais (Idêntico ao do Excel) -->
+          <tfoot class="table-dark">
+            <tr class="fw-bold">
+              <td>TOTAIS DO MÊS</td>
+              <td class="text-end mono-num text-success">R$ {{ flow.totalIncome | number:'1.2-2' }}</td>
+              <td class="text-end mono-num text-danger">R$ {{ flow.totalFixedExpenses | number:'1.2-2' }}</td>
+              <td class="text-end mono-num text-warning">R$ {{ flow.totalDailyExpenses | number:'1.2-2' }}</td>
+              <td class="text-end mono-num text-white">R$ {{ flow.totalExpenses | number:'1.2-2' }}</td>
+              <td class="text-end mono-num fs-5" [ngClass]="flow.finalBalance >= 0 ? 'text-success' : 'text-danger'">
+                R$ {{ flow.finalBalance | number:'1.2-2' }}
+              </td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
