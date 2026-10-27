@@ -103,6 +103,7 @@ public static class DbInitializer
             await EnsureColumnAsync(conn, "Transactions", "InvoiceMonth", "int NULL");
             await EnsureColumnAsync(conn, "Transactions", "InvoiceYear", "int NULL");
             await EnsureColumnAsync(conn, "Transactions", "IsInvoicePayment", "tinyint(1) NOT NULL DEFAULT 0");
+            await EnsureColumnAsync(conn, "Transactions", "RecurrenceGroupId", "varchar(50) NULL");
 
             // 3. Ensure Index & Foreign key
             using (var cmd = conn.CreateCommand())

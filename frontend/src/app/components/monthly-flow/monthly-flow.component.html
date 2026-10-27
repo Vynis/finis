@@ -211,13 +211,24 @@
                                 {{ t.categoryName }}
                               </span>
                             </td>
-                            <td class="fw-semibold text-dark">{{ t.description }}</td>
+                            <td>
+                              <div class="fw-semibold text-dark">
+                                {{ t.description }}
+                                <i *ngIf="t.isRecurring || t.recurrenceGroupId" class="bi bi-arrow-repeat text-primary ms-1" title="Lançamento Recorrente Mensal"></i>
+                              </div>
+                              <div *ngIf="t.notes" class="text-muted" style="font-size: 0.72rem;">
+                                <i class="bi bi-info-circle me-1"></i>{{ t.notes }}
+                              </div>
+                            </td>
                             <td class="small text-muted">
-                              <span *ngIf="t.paymentMethod === 2" class="d-inline-flex align-items-center gap-1">
+                              <span *ngIf="t.paymentMethod === 2" class="d-inline-flex flex-wrap align-items-center gap-1">
                                 <i class="bi bi-credit-card-2-front text-primary"></i>
                                 <span class="fw-semibold text-dark">{{ t.creditCardName || 'Cartão' }}</span>
                                 <span *ngIf="t.installmentNumber && t.totalInstallments" class="badge bg-light text-secondary border">
                                   {{ t.installmentNumber }}/{{ t.totalInstallments }}
+                                </span>
+                                <span *ngIf="t.invoiceMonth && t.invoiceYear" class="badge bg-light text-primary border" style="font-size: 0.68rem;">
+                                  Fatura {{ t.invoiceMonth }}/{{ t.invoiceYear }}
                                 </span>
                               </span>
                               <span *ngIf="t.paymentMethod !== 2">{{ t.paymentMethodName }}</span>

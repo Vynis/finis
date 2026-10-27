@@ -99,8 +99,19 @@ export class MonthlyFlowComponent implements OnInit, OnDestroy {
 
   onDelete(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
-    if (confirm(`Deseja realmente excluir o lançamento "${t.description}" de R$ ${t.amount.toFixed(2)}?`)) {
-      this.api.deleteTransaction(t.id).subscribe();
+    if (t.recurrenceGroupId || t.isRecurring) {
+      const ans = confirm(`"${t.description}" faz parte de uma série recorrente.\n\nDeseja excluir também as repetições futuras deste lançamento?\n\n• Clique [OK] para excluir este e os futuros.\n• Clique [Cancelar] se deseja excluir apenas este mês.`);
+      if (ans) {
+        this.api.deleteTransaction(t.id, { deleteFuture: true }).subscribe();
+      } else {
+        if (confirm(`Deseja excluir APENAS o lançamento deste mês ("${t.description}")?`)) {
+          this.api.deleteTransaction(t.id).subscribe();
+        }
+      }
+    } else {
+      if (confirm(`Deseja realmente excluir o lançamento "${t.description}" de R$ ${t.amount.toFixed(2)}?`)) {
+        this.api.deleteTransaction(t.id).subscribe();
+      }
     }
   }
 

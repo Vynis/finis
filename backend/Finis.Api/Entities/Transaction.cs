@@ -30,5 +30,8 @@ public class Transaction
     public int? InvoiceYear { get; set; }
     public bool IsInvoicePayment { get; set; } = false;
 
+    // Recurring / Fixed Monthly Replication
+    public string? RecurrenceGroupId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -72,8 +72,11 @@ export class FinisApiService {
     );
   }
 
-  deleteTransaction(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/transactions/${id}`).pipe(
+  deleteTransaction(id: number, options?: { deleteFuture?: boolean; deleteAllSeries?: boolean }): Observable<void> {
+    let params = new HttpParams();
+    if (options?.deleteFuture) params = params.set('deleteFuture', 'true');
+    if (options?.deleteAllSeries) params = params.set('deleteAllSeries', 'true');
+    return this.http.delete<void>(`${this.apiUrl}/transactions/${id}`, { params }).pipe(
       tap(() => this.notifyDataChanged())
     );
   }

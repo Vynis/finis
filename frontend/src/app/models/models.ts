@@ -115,6 +115,8 @@ export interface Transaction {
   invoiceMonth?: number;
   invoiceYear?: number;
   isInvoicePayment?: boolean;
+  recurrenceGroupId?: string;
+  isRecurring?: boolean;
   createdAt: string;
 }
 
@@ -129,6 +131,8 @@ export interface TransactionCreateUpdate {
   notes?: string;
   creditCardId?: number;
   installments?: number;
+  isRecurring?: boolean;
+  recurrenceMonths?: number;
 }
 
 export interface DailyFlow {

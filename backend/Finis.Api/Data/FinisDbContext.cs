@@ -64,9 +64,11 @@ public class FinisDbContext : DbContext
             entity.Property(t => t.Amount).HasPrecision(18, 2).IsRequired();
             entity.Property(t => t.Description).HasMaxLength(200).IsRequired();
             entity.Property(t => t.Notes).HasMaxLength(500);
+            entity.Property(t => t.RecurrenceGroupId).HasMaxLength(50);
 
             entity.HasIndex(t => new { t.UserId, t.Date });
             entity.HasIndex(t => new { t.UserId, t.CreditCardId, t.InvoiceYear, t.InvoiceMonth });
+            entity.HasIndex(t => new { t.UserId, t.RecurrenceGroupId });
 
             entity.HasOne(t => t.User)
                   .WithMany(u => u.Transactions)

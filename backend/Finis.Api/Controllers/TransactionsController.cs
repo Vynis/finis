@@ -86,6 +86,7 @@ public class TransactionsController : BaseApiController
                 InvoiceMonth = t.InvoiceMonth,
                 InvoiceYear = t.InvoiceYear,
                 IsInvoicePayment = t.IsInvoicePayment,
+                RecurrenceGroupId = t.RecurrenceGroupId,
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();
@@ -131,6 +132,7 @@ public class TransactionsController : BaseApiController
             InvoiceMonth = t.InvoiceMonth,
             InvoiceYear = t.InvoiceYear,
             IsInvoicePayment = t.IsInvoicePayment,
+            RecurrenceGroupId = t.RecurrenceGroupId,
             CreatedAt = t.CreatedAt
         });
     }
@@ -239,6 +241,78 @@ public class TransactionsController : BaseApiController
                 TotalInstallments = first.TotalInstallments,
                 InvoiceMonth = first.InvoiceMonth,
                 InvoiceYear = first.InvoiceYear,
+                RecurrenceGroupId = first.RecurrenceGroupId,
+                CreatedAt = first.CreatedAt
+            });
+        }
+
+        // Recurring series for non-credit card payment methods (e.g. Salário, Aluguel, Assinaturas)
+        if (dto.PaymentMethod != PaymentMethod.CartaoCredito && dto.IsRecurring && dto.RecurrenceMonths.HasValue && dto.RecurrenceMonths.Value > 1)
+        {
+            int totalMonths = Math.Min(60, Math.Max(2, dto.RecurrenceMonths.Value));
+            string recurrenceGroupId = Guid.NewGuid().ToString();
+
+            var recurringTransactions = new List<Transaction>();
+
+            for (int m = 0; m < totalMonths; m++)
+            {
+                DateTime tDate = dto.Date;
+                if (m > 0)
+                {
+                    var targetMonthDate = dto.Date.AddMonths(m);
+                    int daysInTargetMonth = DateTime.DaysInMonth(targetMonthDate.Year, targetMonthDate.Month);
+                    int dayClamped = Math.Min(dto.Date.Day, daysInTargetMonth);
+                    tDate = new DateTime(targetMonthDate.Year, targetMonthDate.Month, dayClamped);
+                }
+
+                // Month 0 keeps the requested status; future months (m > 0) default to Previsto
+                var tStatus = (m == 0) ? dto.Status : TransactionStatus.Previsto;
+
+                var recTransaction = new Transaction
+                {
+                    UserId = userId,
+                    Date = tDate,
+                    Type = dto.Type,
+                    Amount = dto.Amount,
+                    Description = dto.Description.Trim(),
+                    CategoryId = dto.CategoryId,
+                    Status = tStatus,
+                    PaymentMethod = dto.PaymentMethod,
+                    Notes = dto.Notes?.Trim(),
+                    RecurrenceGroupId = recurrenceGroupId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                recurringTransactions.Add(recTransaction);
+            }
+
+            _context.Transactions.AddRange(recurringTransactions);
+            await _context.SaveChangesAsync();
+
+            var first = recurringTransactions.First();
+            if (first.CategoryId.HasValue)
+            {
+                await _context.Entry(first).Reference(t => t.Category).LoadAsync();
+            }
+
+            return CreatedAtAction(nameof(GetById), new { id = first.Id }, new TransactionResponseDto
+            {
+                Id = first.Id,
+                Date = first.Date,
+                Day = first.Day,
+                Month = first.Month,
+                Year = first.Year,
+                Type = first.Type,
+                Amount = first.Amount,
+                Description = first.Description,
+                CategoryId = first.CategoryId,
+                CategoryName = first.Category?.Name ?? "Sem categoria",
+                CategoryColor = first.Category?.ColorHex ?? "#6B7280",
+                CategoryIcon = first.Category?.Icon ?? "tag",
+                Status = first.Status,
+                PaymentMethod = first.PaymentMethod,
+                Notes = first.Notes,
+                RecurrenceGroupId = first.RecurrenceGroupId,
                 CreatedAt = first.CreatedAt
             });
         }
@@ -306,6 +380,7 @@ public class TransactionsController : BaseApiController
             TotalInstallments = transaction.TotalInstallments,
             InvoiceMonth = transaction.InvoiceMonth,
             InvoiceYear = transaction.InvoiceYear,
+            RecurrenceGroupId = transaction.RecurrenceGroupId,
             CreatedAt = transaction.CreatedAt
         });
     }
@@ -391,12 +466,13 @@ public class TransactionsController : BaseApiController
             InvoiceMonth = transaction.InvoiceMonth,
             InvoiceYear = transaction.InvoiceYear,
             IsInvoicePayment = transaction.IsInvoicePayment,
+            RecurrenceGroupId = transaction.RecurrenceGroupId,
             CreatedAt = transaction.CreatedAt
         });
     }
 
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, [FromQuery] bool deleteFuture = false, [FromQuery] bool deleteAllSeries = false)
     {
         var userId = GetUserId();
         var transaction = await _context.Transactions.FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
@@ -404,6 +480,28 @@ public class TransactionsController : BaseApiController
         if (transaction == null)
         {
             return NotFound(new { message = "Transação não encontrada." });
+        }
+
+        if (!string.IsNullOrEmpty(transaction.RecurrenceGroupId))
+        {
+            if (deleteAllSeries)
+            {
+                var series = await _context.Transactions
+                    .Where(t => t.UserId == userId && t.RecurrenceGroupId == transaction.RecurrenceGroupId)
+                    .ToListAsync();
+                _context.Transactions.RemoveRange(series);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
+            else if (deleteFuture)
+            {
+                var futureSeries = await _context.Transactions
+                    .Where(t => t.UserId == userId && t.RecurrenceGroupId == transaction.RecurrenceGroupId && t.Date >= transaction.Date)
+                    .ToListAsync();
+                _context.Transactions.RemoveRange(futureSeries);
+                await _context.SaveChangesAsync();
+                return NoContent();
+            }
         }
 
         _context.Transactions.Remove(transaction);

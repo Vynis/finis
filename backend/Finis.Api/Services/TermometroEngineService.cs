@@ -72,12 +72,10 @@ public class TermometroEngineService : ITermometroEngineService
             .ToListAsync();
 
         // Invoices maturing in this month
-        var cardInvoicesForMonth = await _context.Transactions
+        var cardPurchasesForMonth = await _context.Transactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.CreditCardId != null && !t.IsInvoicePayment
                         && t.InvoiceYear == year && t.InvoiceMonth == month)
-            .GroupBy(t => t.CreditCardId!.Value)
-            .Select(g => new { CardId = g.Key, Total = g.Sum(x => x.Amount) })
             .ToListAsync();
 
         var paidCardInvoices = await _context.Transactions
@@ -93,12 +91,15 @@ public class TermometroEngineService : ITermometroEngineService
         var projectedInvoices = new List<TransactionResponseDto>();
         foreach (var card in activeCards)
         {
-            var invoiceData = cardInvoicesForMonth.FirstOrDefault(i => i.CardId == card.Id);
-            decimal invTotal = invoiceData?.Total ?? 0;
+            var cardPurchases = cardPurchasesForMonth.Where(p => p.CreditCardId == card.Id).ToList();
+            decimal invTotal = cardPurchases.Sum(p => p.Amount);
 
             if (invTotal > 0 && !paidCardSet.Contains(card.Id))
             {
                 int dueDayClamped = Math.Min(card.DueDay, daysInMonth);
+                var itemDescriptions = cardPurchases.Select(p => $"{p.Description} (R$ {p.Amount:N2})");
+                string itemsSummary = string.Join("; ", itemDescriptions);
+
                 projectedInvoices.Add(new TransactionResponseDto
                 {
                     Id = -card.Id, // Negative ID signals projected item
@@ -116,7 +117,7 @@ public class TermometroEngineService : ITermometroEngineService
                     PaymentMethod = PaymentMethod.CartaoCredito,
                     CreditCardId = card.Id,
                     CreditCardName = card.Name,
-                    Notes = $"Fatura do cartão prevista para o dia {dueDayClamped}. Clique em Pagar Fatura para efetivar.",
+                    Notes = $"Lançamentos na fatura: {itemsSummary}",
                     IsInvoicePayment = false,
                     CreatedAt = DateTime.UtcNow
                 });
@@ -158,6 +159,7 @@ public class TermometroEngineService : ITermometroEngineService
                     InvoiceMonth = t.InvoiceMonth,
                     InvoiceYear = t.InvoiceYear,
                     IsInvoicePayment = t.IsInvoicePayment,
+                    RecurrenceGroupId = t.RecurrenceGroupId,
                     CreatedAt = t.CreatedAt
                 })
                 .ToList();
@@ -312,6 +314,7 @@ public class TermometroEngineService : ITermometroEngineService
                 InvoiceMonth = t.InvoiceMonth,
                 InvoiceYear = t.InvoiceYear,
                 IsInvoicePayment = t.IsInvoicePayment,
+                RecurrenceGroupId = t.RecurrenceGroupId,
                 CreatedAt = t.CreatedAt
             })
             .ToListAsync();

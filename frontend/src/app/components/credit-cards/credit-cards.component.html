@@ -210,11 +210,12 @@
                 <th>Categoria</th>
                 <th>Parcela</th>
                 <th class="text-end">Valor na Fatura</th>
+                <th class="text-center" style="width: 90px;">Ações</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngIf="selectedInvoice.transactions.length === 0">
-                <td colspan="5" class="text-center py-4 text-muted small">
+                <td colspan="6" class="text-center py-4 text-muted small">
                   Nenhuma compra registrada para esta fatura até o momento.
                 </td>
               </tr>
@@ -233,6 +234,16 @@
                 </td>
                 <td class="mono-num fw-bold text-end text-danger">
                   - R$ {{ t.amount | number:'1.2-2' }}
+                </td>
+                <td class="text-center">
+                  <div class="d-flex align-items-center justify-content-center gap-1">
+                    <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="onEditTransaction(t)" title="Editar Lançamento">
+                      <i class="bi bi-pencil text-secondary"></i>
+                    </button>
+                    <button class="btn btn-light btn-sm rounded-circle p-1 text-danger" style="width: 28px; height: 28px;" (click)="onDeleteTransaction(t)" title="Excluir Lançamento">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>

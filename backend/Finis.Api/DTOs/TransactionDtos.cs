@@ -28,6 +28,11 @@ public class TransactionCreateDto
     public int? CreditCardId { get; set; }
     [Range(1, 60, ErrorMessage = "O número de parcelas deve ser entre 1 e 60.")]
     public int? Installments { get; set; } = 1;
+
+    // Recurring / Fixed Monthly options
+    public bool IsRecurring { get; set; } = false;
+    [Range(1, 60, ErrorMessage = "O número de meses recorrentes deve ser entre 1 e 60.")]
+    public int? RecurrenceMonths { get; set; } = 1;
 }
 
 public class TransactionUpdateDto
@@ -83,6 +88,10 @@ public class TransactionResponseDto
     public int? InvoiceMonth { get; set; }
     public int? InvoiceYear { get; set; }
     public bool IsInvoicePayment { get; set; }
+
+    // Recurring / Fixed Monthly info
+    public string? RecurrenceGroupId { get; set; }
+    public bool IsRecurring => !string.IsNullOrEmpty(RecurrenceGroupId);
 
     public DateTime CreatedAt { get; set; }
 }

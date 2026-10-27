@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
 import { Category, CreditCard, PaymentMethod, Transaction, TransactionCreateUpdate, TransactionStatus, TransactionType } from '../../models/models';
 
@@ -7,7 +8,7 @@ import { Category, CreditCard, PaymentMethod, Transaction, TransactionCreateUpda
   templateUrl: './transaction-modal.component.html',
   styleUrls: ['./transaction-modal.component.css']
 })
-export class TransactionModalComponent implements OnInit {
+export class TransactionModalComponent implements OnInit, OnDestroy {
   @Input() isOpen = false;
   @Input() transactionToEdit: Transaction | null = null;
   @Input() initialDate: string | null = null;
@@ -17,6 +18,7 @@ export class TransactionModalComponent implements OnInit {
 
   categories: Category[] = [];
   filteredCategories: Category[] = [];
+  otherCategories: Category[] = [];
   creditCards: CreditCard[] = [];
 
   // Form Model
@@ -33,8 +35,14 @@ export class TransactionModalComponent implements OnInit {
   creditCardId: number | null = null;
   installments: number = 1;
 
+  // Recurring / Fixed monthly options
+  isRecurring: boolean = false;
+  recurrenceMonths: number = 12;
+
   loading = false;
   errorMessage = '';
+
+  private refreshSub?: Subscription;
 
   // Enums for template
   TransactionType = TransactionType;
@@ -46,6 +54,16 @@ export class TransactionModalComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadCreditCards();
+
+    // Auto-refresh categories and cards whenever any changes occur in the system
+    this.refreshSub = this.api.refresh$.subscribe(() => {
+      this.loadCategories();
+      this.loadCreditCards();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
   }
 
   loadCategories(): void {
@@ -72,6 +90,7 @@ export class TransactionModalComponent implements OnInit {
   resetForm(presetDate?: string, editData?: Transaction | null): void {
     this.errorMessage = '';
     this.loading = false;
+    this.loadCategories();
     this.loadCreditCards();
 
     if (editData) {
@@ -85,6 +104,8 @@ export class TransactionModalComponent implements OnInit {
       this.notes = editData.notes || '';
       this.creditCardId = editData.creditCardId || (this.creditCards.length > 0 ? this.creditCards[0].id : null);
       this.installments = editData.totalInstallments || 1;
+      this.isRecurring = false;
+      this.recurrenceMonths = 12;
     } else {
       this.type = TransactionType.Diario;
       this.date = presetDate ? presetDate.substring(0, 10) : new Date().toISOString().substring(0, 10);
@@ -96,6 +117,8 @@ export class TransactionModalComponent implements OnInit {
       this.notes = '';
       this.creditCardId = this.creditCards.length > 0 ? this.creditCards[0].id : null;
       this.installments = 1;
+      this.isRecurring = false;
+      this.recurrenceMonths = 12;
     }
 
     this.filterCategories();
@@ -107,9 +130,32 @@ export class TransactionModalComponent implements OnInit {
   }
 
   filterCategories(): void {
-    this.filteredCategories = this.categories.filter(c => c.type === this.type);
-    if (this.categoryId && !this.filteredCategories.some(c => c.id === this.categoryId)) {
+    const curType = Number(this.type);
+    this.filteredCategories = this.categories.filter(c => Number(c.type) === curType);
+    this.otherCategories = this.categories.filter(c => Number(c.type) !== curType);
+
+    if (this.categoryId && !this.categories.some(c => c.id === this.categoryId)) {
       this.categoryId = null;
+    }
+  }
+
+  onCategoryChange(): void {
+    if (this.categoryId) {
+      const selected = this.categories.find(c => c.id === this.categoryId);
+      if (selected && Number(selected.type) !== Number(this.type)) {
+        // Automatically align transaction type with the category
+        this.type = selected.type;
+        this.filterCategories();
+      }
+    }
+  }
+
+  getTypeName(t: TransactionType | number): string {
+    switch (Number(t)) {
+      case TransactionType.Entrada: return 'Entrada';
+      case TransactionType.SaidaFixa: return 'Saída Fixa';
+      case TransactionType.Diario: return 'Gasto Diário';
+      default: return 'Geral';
     }
   }
 
@@ -149,7 +195,9 @@ export class TransactionModalComponent implements OnInit {
       status: Number(this.status),
       notes: this.notes ? this.notes.trim() : undefined,
       creditCardId: (isCard && this.creditCardId) ? Number(this.creditCardId) : undefined,
-      installments: isCard ? Math.max(1, Number(this.installments) || 1) : undefined
+      installments: isCard ? Math.max(1, Number(this.installments) || 1) : undefined,
+      isRecurring: (!isCard && !this.transactionToEdit && this.isRecurring) ? true : undefined,
+      recurrenceMonths: (!isCard && !this.transactionToEdit && this.isRecurring) ? Math.max(2, Number(this.recurrenceMonths) || 12) : undefined
     };
 
     if (this.transactionToEdit) {

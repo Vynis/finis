@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
 import { CreditCard, CreditCardCreateUpdate, CreditCardInvoiceSummary, PaymentMethod, Transaction } from '../../models/models';
@@ -18,6 +18,8 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
   loadingInvoices = false;
   errorMessage = '';
   successMessage = '';
+
+  @Output() editTransaction = new EventEmitter<Transaction>();
 
   private refreshSub?: Subscription;
 
@@ -269,5 +271,15 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
   getLimitPercentage(card: CreditCard): number {
     if (!card.limit || card.limit <= 0) return 0;
     return Math.min(100, Math.round((card.totalUsedLimit / card.limit) * 100));
+  }
+
+  onEditTransaction(t: Transaction): void {
+    this.editTransaction.emit(t);
+  }
+
+  onDeleteTransaction(t: Transaction): void {
+    if (confirm(`Deseja realmente excluir o lançamento "${t.description}" de R$ ${Number(t.amount).toFixed(2)} desta fatura?`)) {
+      this.api.deleteTransaction(t.id).subscribe();
+    }
   }
 }
