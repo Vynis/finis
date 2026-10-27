@@ -16,7 +16,7 @@ public class EconomyController : BaseApiController
     }
 
     [HttpGet("{year:int}")]
-    public async Task<ActionResult<AnnualEconomyResponseDto>> GetAnnualReport(int year)
+    public async Task<ActionResult<AnnualEconomyResponseDto>> GetAnnualReport(int year, [FromQuery] int? accountId)
     {
         if (year < 2000 || year > 2100)
         {
@@ -24,7 +24,7 @@ public class EconomyController : BaseApiController
         }
 
         var userId = GetUserId();
-        var report = await _engineService.GetAnnualEconomyAsync(userId, year);
+        var report = await _engineService.GetAnnualEconomyAsync(userId, year, accountId);
 
         return Ok(report);
     }

@@ -15,5 +15,8 @@ public class CreditCard
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public int? AccountId { get; set; }
+    public Account? Account { get; set; }
+
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }

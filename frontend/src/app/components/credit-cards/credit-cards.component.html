@@ -284,6 +284,18 @@
             />
           </div>
 
+          <!-- Conta Vinculada (Pessoal ou Empresa) -->
+          <div class="mb-3" *ngIf="accounts.length > 0">
+            <label class="form-label small fw-semibold text-secondary">Conta / Carteira Vinculada</label>
+            <select class="form-select" [(ngModel)]="formAccountId" name="formAccountId">
+              <option [ngValue]="null">-- Nenhuma (Global) --</option>
+              <option *ngFor="let acc of accounts" [ngValue]="acc.id">
+                {{ acc.name }} ({{ acc.typeName }})
+              </option>
+            </select>
+            <span class="text-muted" style="font-size: 0.72rem;">Indica se este cartão pertence à sua conta Pessoal ou da Empresa</span>
+          </div>
+
           <div class="row g-3 mb-3">
             <div class="col-6">
               <label class="form-label small fw-semibold text-secondary">Limite Total (R$)</label>

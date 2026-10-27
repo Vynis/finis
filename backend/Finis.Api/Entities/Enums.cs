@@ -23,3 +23,11 @@ public enum PaymentMethod
     Transferencia = 6,
     Outro = 7
 }
+
+public enum AccountType
+{
+    Pessoal = 1,
+    Empresa = 2,
+    Investimento = 3,
+    Outro = 4
+}

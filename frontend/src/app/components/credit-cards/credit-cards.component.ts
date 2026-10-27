@@ -1,7 +1,7 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
-import { CreditCard, CreditCardCreateUpdate, CreditCardInvoiceSummary, PaymentMethod, Transaction } from '../../models/models';
+import { Account, CreditCard, CreditCardCreateUpdate, CreditCardInvoiceSummary, PaymentMethod, Transaction } from '../../models/models';
 
 @Component({
   selector: 'app-credit-cards',
@@ -61,13 +61,23 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
   ];
 
   brands = ['Mastercard', 'Visa', 'Elo', 'American Express', 'Hipercard', 'Outro'];
+  accounts: Account[] = [];
+  formAccountId: number | null = null;
 
   constructor(private api: FinisApiService) {}
 
   ngOnInit(): void {
     this.loadCards();
+    this.loadAccounts();
     this.refreshSub = this.api.refresh$.subscribe(() => {
       this.loadCards(true);
+      this.loadAccounts();
+    });
+  }
+
+  loadAccounts(): void {
+    this.api.getAccounts().subscribe({
+      next: accs => this.accounts = accs
     });
   }
 
@@ -135,6 +145,7 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
     this.formDueDay = 5;
     this.formColor = '#8A05BE';
     this.formBrand = 'Mastercard';
+    this.formAccountId = this.api.getSelectedAccountId() || (this.accounts.length > 0 ? this.accounts[0].id : null);
     this.cardError = '';
     this.cardSaving = false;
     this.isCardModalOpen = true;
@@ -148,6 +159,7 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
     this.formDueDay = card.dueDay;
     this.formColor = card.colorHex;
     this.formBrand = card.brand;
+    this.formAccountId = card.accountId || null;
     this.cardError = '';
     this.cardSaving = false;
     this.isCardModalOpen = true;
@@ -179,6 +191,7 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
       dueDay: Number(this.formDueDay),
       colorHex: this.formColor,
       brand: this.formBrand,
+      accountId: this.formAccountId ? Number(this.formAccountId) : undefined,
       isActive: true
     };
 

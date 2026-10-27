@@ -97,6 +97,12 @@ export class MonthlyFlowComponent implements OnInit, OnDestroy {
     this.editTransaction.emit(t);
   }
 
+  onToggleStatus(t: Transaction, event: MouseEvent): void {
+    event.stopPropagation();
+    if (t.id <= 0) return;
+    this.api.toggleTransactionStatus(t.id).subscribe();
+  }
+
   onDelete(t: Transaction, event: MouseEvent): void {
     event.stopPropagation();
     if (t.recurrenceGroupId || t.isRecurring) {
@@ -125,5 +131,14 @@ export class MonthlyFlowComponent implements OnInit, OnDestroy {
     return today.getFullYear() === d.getFullYear() &&
            today.getMonth() === d.getMonth() &&
            today.getDate() === d.getDate();
+  }
+
+  isOverdue(dateStr: string, status: number): boolean {
+    if (status !== 2) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
   }
 }

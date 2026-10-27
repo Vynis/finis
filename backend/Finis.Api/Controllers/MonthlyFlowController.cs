@@ -16,7 +16,7 @@ public class MonthlyFlowController : BaseApiController
     }
 
     [HttpGet("{year:int}/{month:int}")]
-    public async Task<ActionResult<MonthlyFlowResponseDto>> GetMonthlyFlow(int year, int month)
+    public async Task<ActionResult<MonthlyFlowResponseDto>> GetMonthlyFlow(int year, int month, [FromQuery] int? accountId)
     {
         if (month < 1 || month > 12)
         {
@@ -29,7 +29,7 @@ public class MonthlyFlowController : BaseApiController
         }
 
         var userId = GetUserId();
-        var result = await _engineService.GetMonthlyFlowAsync(userId, year, month);
+        var result = await _engineService.GetMonthlyFlowAsync(userId, year, month, accountId);
 
         return Ok(result);
     }

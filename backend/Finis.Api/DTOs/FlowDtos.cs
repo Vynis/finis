@@ -70,6 +70,18 @@ public class DashboardSummaryDto
     public decimal MonthCreditCardTotal { get; set; }
     public decimal MonthPerformance { get; set; }
     public decimal MonthSavingsRate { get; set; }
+
+    // Previsto x Realizado metrics
+    public decimal RealizedIncome { get; set; }
+    public decimal PendingIncome { get; set; }
+    public decimal RealizedExpenses { get; set; }
+    public decimal PendingExpenses { get; set; }
+    public decimal RealizedPerformance { get; set; }
+    public decimal PendingPerformance { get; set; }
+
+    // Overdue summary
+    public OverdueSummaryDto OverdueSummary { get; set; } = new();
+
     public List<TransactionResponseDto> RecentTransactions { get; set; } = new();
     public List<DailyTrendPointDto> DailyTrend { get; set; } = new();
     public List<CategoryExpenseShareDto> CategoryDistribution { get; set; } = new();
@@ -101,4 +113,12 @@ public class CategoryDto
     public string ColorHex { get; set; } = "#3B82F6";
     public string Icon { get; set; } = "tag";
     public bool IsDefault { get; set; }
+}
+
+public class OverdueSummaryDto
+{
+    public int TotalCount { get; set; }
+    public decimal TotalExpenses { get; set; }
+    public decimal TotalIncome { get; set; }
+    public List<TransactionResponseDto> Transactions { get; set; } = new();
 }

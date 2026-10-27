@@ -1,0 +1,234 @@
+<div class="container-fluid px-md-4 py-4">
+  <!-- Top Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <h2 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+        <i class="bi bi-wallet2 text-success"></i>
+        <span>Contas e Carteiras</span>
+      </h2>
+      <p class="text-muted small mb-0">
+        Separe sua vida <strong>Pessoal (PF)</strong> e sua <strong>Empresa (PJ)</strong> ou visualize tudo de forma <strong>Consolidada</strong>.
+      </p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-secondary rounded-pill px-3 fw-semibold d-flex align-items-center gap-2" [class.btn-dark]="selectedAccountId === null" [class.text-white]="selectedAccountId === null" (click)="selectActiveView(null)">
+        <i class="bi bi-globe"></i>
+        <span>Visão Consolidada</span>
+      </button>
+
+      <button class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm d-flex align-items-center gap-2" (click)="openNewModal()">
+        <i class="bi bi-plus-circle-fill"></i>
+        <span>Nova Conta</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Cards Banner -->
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="card card-finis p-3 border-start border-4 border-success">
+        <span class="text-muted small fw-semibold text-uppercase">Saldo Atual Consolidado</span>
+        <h3 class="mono-num fw-bold mb-0" [ngClass]="getTotalCurrentBalance() >= 0 ? 'text-success' : 'text-danger'">
+          R$ {{ getTotalCurrentBalance() | number:'1.2-2' }}
+        </h3>
+        <span class="text-muted" style="font-size: 0.72rem;">Soma em todas as contas</span>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card card-finis p-3 border-start border-4 border-primary">
+        <span class="text-muted small fw-semibold text-uppercase">Saldo Inicial Total</span>
+        <h3 class="mono-num fw-bold text-dark mb-0">
+          R$ {{ getTotalInitialBalance() | number:'1.2-2' }}
+        </h3>
+        <span class="text-muted" style="font-size: 0.72rem;">Partida somada das contas ativas</span>
+      </div>
+    </div>
+
+    <div class="col-12 col-md-4">
+      <div class="card card-finis p-3 border-start border-4 border-info">
+        <span class="text-muted small fw-semibold text-uppercase">Contas Cadastradas</span>
+        <h3 class="mono-num fw-bold text-dark mb-0">
+          {{ accounts.length }}
+        </h3>
+        <span class="text-muted" style="font-size: 0.72rem;">
+          Visão ativa atual: <strong>{{ selectedAccountId ? 'Conta Filtrada' : 'Consolidado (Todas)' }}</strong>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Accounts Cards Grid -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-success" role="status"></div>
+    <p class="text-muted small mt-2">Carregando contas...</p>
+  </div>
+
+  <div *ngIf="!loading && accounts.length === 0" class="card card-finis p-5 text-center">
+    <i class="bi bi-wallet2 text-muted fs-1 mb-2"></i>
+    <h5>Nenhuma conta encontrada</h5>
+    <p class="text-muted small">Clique no botão "Nova Conta" para cadastrar sua conta Pessoal ou Empresa.</p>
+  </div>
+
+  <div *ngIf="!loading && accounts.length > 0" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+    <div class="col" *ngFor="let acc of accounts">
+      <div class="card card-finis h-100 shadow-sm border position-relative overflow-hidden" [class.border-success]="selectedAccountId === acc.id" [style.border-top]="'4px solid ' + acc.colorHex">
+        <!-- Active View Ribbon Badge -->
+        <div *ngIf="selectedAccountId === acc.id" class="position-absolute top-0 end-0 bg-success text-white px-3 py-1 small fw-bold rounded-bottom-start shadow-sm" style="font-size: 0.7rem;">
+          <i class="bi bi-check2-circle me-1"></i> VISÃO ATIVA
+        </div>
+
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" [style.background-color]="acc.colorHex" style="width: 48px; height: 48px; font-size: 1.25rem;">
+              <i class="bi" [ngClass]="'bi-' + acc.icon"></i>
+            </div>
+            <div>
+              <h5 class="fw-bold mb-1 text-dark">{{ acc.name }}</h5>
+              <span class="badge border" [ngClass]="getTypeBadgeClass(acc.type)">
+                {{ acc.typeName }}
+              </span>
+            </div>
+          </div>
+
+          <div class="bg-light p-3 rounded-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="text-muted small">Saldo Atual:</span>
+              <span class="mono-num fw-bold fs-5" [ngClass]="acc.currentBalance >= 0 ? 'text-success' : 'text-danger'">
+                R$ {{ acc.currentBalance | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center text-muted" style="font-size: 0.78rem;">
+              <span>Saldo Inicial:</span>
+              <span class="mono-num fw-semibold">R$ {{ acc.initialBalance | number:'1.2-2' }}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center text-muted mt-1" style="font-size: 0.78rem;">
+              <span>Lançamentos:</span>
+              <span><strong>{{ acc.transactionsCount }}</strong> registros</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+            <button class="btn btn-sm rounded-pill px-3 fw-semibold" [ngClass]="selectedAccountId === acc.id ? 'btn-success' : 'btn-outline-secondary'" (click)="selectActiveView(acc.id)">
+              <i class="bi" [ngClass]="selectedAccountId === acc.id ? 'bi-check2' : 'bi-eye'"></i>
+              <span class="ms-1">{{ selectedAccountId === acc.id ? 'Visualizando' : 'Ver no Termômetro' }}</span>
+            </button>
+
+            <div class="d-flex gap-1">
+              <button class="btn btn-light btn-sm rounded-circle p-2 text-secondary" (click)="openEditModal(acc)" title="Editar Conta">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-light btn-sm rounded-circle p-2 text-danger" (click)="deleteAccount(acc)" [disabled]="accounts.length <= 1" title="Excluir Conta">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Criar / Editar Conta -->
+<div class="modal fade show d-block" *ngIf="isModalOpen" tabindex="-1" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-bottom py-3 px-4">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-wallet2 text-success"></i>
+          <span>{{ modalTitle }}</span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeModal()" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="modalError" class="alert alert-danger py-2 small d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ modalError }}</span>
+        </div>
+
+        <form (ngSubmit)="saveAccount()">
+          <!-- Nome da Conta -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Nome da Conta / Carteira*</label>
+            <input type="text" class="form-control" [(ngModel)]="formName" name="formName" placeholder="Ex: Conta Empresa (PJ), Nubank Pessoal, Investimentos" required autofocus>
+          </div>
+
+          <!-- Tipo da Conta -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Tipo de Finalidade</label>
+            <div class="btn-group w-100 shadow-sm" role="group">
+              <button type="button" class="btn fw-semibold" [ngClass]="formType === 1 ? 'btn-success' : 'btn-outline-secondary'" (click)="formType = 1">
+                <i class="bi bi-person me-1"></i> Pessoal
+              </button>
+              <button type="button" class="btn fw-semibold" [ngClass]="formType === 2 ? 'btn-primary' : 'btn-outline-secondary'" (click)="formType = 2">
+                <i class="bi bi-building me-1"></i> Empresa (PJ)
+              </button>
+              <button type="button" class="btn fw-semibold" [ngClass]="formType === 3 ? 'btn-info text-white' : 'btn-outline-secondary'" (click)="formType = 3">
+                <i class="bi bi-graph-up-arrow me-1"></i> Investimento
+              </button>
+            </div>
+          </div>
+
+          <!-- Saldo Inicial -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Saldo Inicial de Partida (R$)</label>
+            <div class="input-group">
+              <span class="input-group-text bg-white fw-bold text-secondary">R$</span>
+              <input type="number" step="0.01" class="form-control mono-num fw-bold fs-5 text-dark" [(ngModel)]="formInitialBalance" name="formInitialBalance" placeholder="0,00" required>
+            </div>
+            <span class="text-muted" style="font-size: 0.72rem;">
+              Valor em conta no primeiro dia antes de começar os lançamentos desta conta.
+            </span>
+          </div>
+
+          <!-- Ícone -->
+          <div class="mb-3">
+            <label class="form-label small fw-semibold text-secondary">Ícone Representativo</label>
+            <div class="d-flex flex-wrap gap-2">
+              <button
+                *ngFor="let ic of availableIcons"
+                type="button"
+                class="btn btn-sm d-flex align-items-center gap-1 rounded-pill"
+                [ngClass]="formIcon === ic.id ? 'btn-dark' : 'btn-light text-secondary border'"
+                (click)="formIcon = ic.id"
+              >
+                <i class="bi" [ngClass]="'bi-' + ic.id"></i>
+                <span style="font-size: 0.75rem;">{{ ic.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Cor da Conta -->
+          <div class="mb-4">
+            <label class="form-label small fw-semibold text-secondary mb-2">Cor da Conta</label>
+            <div class="d-flex flex-wrap gap-2">
+              <div
+                *ngFor="let hex of colorPalette"
+                class="rounded-circle cursor-pointer border shadow-sm"
+                [style.background-color]="hex"
+                [style.width.px]="28"
+                [style.height.px]="28"
+                [style.outline]="formColor === hex ? '3px solid #000' : 'none'"
+                (click)="formColor = hex"
+              ></div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="modalLoading">
+              Cancelar
+            </button>
+            <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="modalLoading">
+              <span *ngIf="modalLoading" class="spinner-border spinner-border-sm me-2"></span>
+              <span>{{ editingAccountId ? 'Salvar Alterações' : 'Criar Conta' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

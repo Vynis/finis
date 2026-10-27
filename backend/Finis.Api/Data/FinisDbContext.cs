@@ -10,6 +10,7 @@ public class FinisDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<CreditCard> CreditCards => Set<CreditCard>();
@@ -26,6 +27,21 @@ public class FinisDbContext : DbContext
             entity.Property(u => u.Name).HasMaxLength(150).IsRequired();
             entity.Property(u => u.Email).HasMaxLength(200).IsRequired();
             entity.Property(u => u.InitialBalance).HasPrecision(18, 2);
+        });
+
+        // Account
+        modelBuilder.Entity<Account>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Name).HasMaxLength(100).IsRequired();
+            entity.Property(a => a.InitialBalance).HasPrecision(18, 2);
+            entity.Property(a => a.ColorHex).HasMaxLength(20);
+            entity.Property(a => a.Icon).HasMaxLength(50);
+
+            entity.HasOne(a => a.User)
+                  .WithMany(u => u.Accounts)
+                  .HasForeignKey(a => a.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Category
@@ -55,6 +71,11 @@ public class FinisDbContext : DbContext
                   .WithMany(u => u.CreditCards)
                   .HasForeignKey(card => card.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(card => card.Account)
+                  .WithMany(a => a.CreditCards)
+                  .HasForeignKey(card => card.AccountId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Transaction
@@ -67,6 +88,7 @@ public class FinisDbContext : DbContext
             entity.Property(t => t.RecurrenceGroupId).HasMaxLength(50);
 
             entity.HasIndex(t => new { t.UserId, t.Date });
+            entity.HasIndex(t => new { t.UserId, t.AccountId, t.Date });
             entity.HasIndex(t => new { t.UserId, t.CreditCardId, t.InvoiceYear, t.InvoiceMonth });
             entity.HasIndex(t => new { t.UserId, t.RecurrenceGroupId });
 
@@ -74,6 +96,11 @@ public class FinisDbContext : DbContext
                   .WithMany(u => u.Transactions)
                   .HasForeignKey(t => t.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.Account)
+                  .WithMany(a => a.Transactions)
+                  .HasForeignKey(t => t.AccountId)
+                  .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(t => t.Category)
                   .WithMany(c => c.Transactions)

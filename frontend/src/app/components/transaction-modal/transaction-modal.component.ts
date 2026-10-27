@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
-import { Category, CreditCard, PaymentMethod, Transaction, TransactionCreateUpdate, TransactionStatus, TransactionType } from '../../models/models';
+import { Account, Category, CreditCard, PaymentMethod, Transaction, TransactionCreateUpdate, TransactionStatus, TransactionType } from '../../models/models';
 
 @Component({
   selector: 'app-transaction-modal',
@@ -20,6 +20,7 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
   filteredCategories: Category[] = [];
   otherCategories: Category[] = [];
   creditCards: CreditCard[] = [];
+  accounts: Account[] = [];
 
   // Form Model
   type: TransactionType = TransactionType.Diario;
@@ -27,6 +28,7 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
   amount: number | null = null;
   description: string = '';
   categoryId: number | null = null;
+  accountId: number | null = null;
   paymentMethod: PaymentMethod = PaymentMethod.Pix;
   status: TransactionStatus = TransactionStatus.Realizado;
   notes: string = '';
@@ -54,11 +56,27 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadCategories();
     this.loadCreditCards();
+    this.loadAccounts();
 
-    // Auto-refresh categories and cards whenever any changes occur in the system
+    // Auto-refresh categories, cards and accounts whenever any changes occur in the system
     this.refreshSub = this.api.refresh$.subscribe(() => {
       this.loadCategories();
       this.loadCreditCards();
+      this.loadAccounts();
+    });
+  }
+
+  loadAccounts(): void {
+    this.api.getAccounts().subscribe({
+      next: accs => {
+        this.accounts = accs;
+        if (!this.accountId && accs.length > 0) {
+          const activeContextId = this.api.getSelectedAccountId();
+          this.accountId = (activeContextId && accs.some(a => a.id === activeContextId))
+            ? activeContextId
+            : accs[0].id;
+        }
+      }
     });
   }
 
@@ -92,6 +110,7 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
     this.loading = false;
     this.loadCategories();
     this.loadCreditCards();
+    this.loadAccounts();
 
     if (editData) {
       this.type = editData.type;
@@ -99,6 +118,7 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       this.amount = editData.amount;
       this.description = editData.description;
       this.categoryId = editData.categoryId || null;
+      this.accountId = editData.accountId || (this.accounts.length > 0 ? this.accounts[0].id : null);
       this.paymentMethod = editData.paymentMethod;
       this.status = editData.status;
       this.notes = editData.notes || '';
@@ -107,11 +127,15 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       this.isRecurring = false;
       this.recurrenceMonths = 12;
     } else {
+      const activeContextId = this.api.getSelectedAccountId();
       this.type = TransactionType.Diario;
       this.date = presetDate ? presetDate.substring(0, 10) : new Date().toISOString().substring(0, 10);
       this.amount = null;
       this.description = '';
       this.categoryId = null;
+      this.accountId = (activeContextId && this.accounts.some(a => a.id === activeContextId))
+        ? activeContextId
+        : (this.accounts.length > 0 ? this.accounts[0].id : null);
       this.paymentMethod = PaymentMethod.Pix;
       this.status = TransactionStatus.Realizado;
       this.notes = '';
@@ -191,6 +215,7 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       amount: Number(this.amount),
       description: this.description.trim(),
       categoryId: this.categoryId ? Number(this.categoryId) : undefined,
+      accountId: this.accountId ? Number(this.accountId) : undefined,
       paymentMethod: Number(this.paymentMethod),
       status: Number(this.status),
       notes: this.notes ? this.notes.trim() : undefined,

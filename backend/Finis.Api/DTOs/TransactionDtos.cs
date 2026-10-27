@@ -20,6 +20,7 @@ public class TransactionCreateDto
     public string Description { get; set; } = string.Empty;
 
     public int? CategoryId { get; set; }
+    public int? AccountId { get; set; }
     public TransactionStatus Status { get; set; } = TransactionStatus.Realizado;
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Pix;
     public string? Notes { get; set; }
@@ -52,6 +53,7 @@ public class TransactionUpdateDto
     public string Description { get; set; } = string.Empty;
 
     public int? CategoryId { get; set; }
+    public int? AccountId { get; set; }
     public TransactionStatus Status { get; set; } = TransactionStatus.Realizado;
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Pix;
     public string? Notes { get; set; }
@@ -79,6 +81,11 @@ public class TransactionResponseDto
     public PaymentMethod PaymentMethod { get; set; }
     public string PaymentMethodName => PaymentMethod.ToString();
     public string? Notes { get; set; }
+
+    // Account (Pessoal vs Empresa) info
+    public int? AccountId { get; set; }
+    public string? AccountName { get; set; }
+    public string? AccountColor { get; set; }
 
     // Credit Card info
     public int? CreditCardId { get; set; }

@@ -21,6 +21,7 @@ public class CreditCardService : ICreditCardService
     public async Task<List<CreditCardResponseDto>> GetCardsAsync(int userId)
     {
         var cards = await _context.CreditCards
+            .Include(c => c.Account)
             .AsNoTracking()
             .Where(c => c.UserId == userId && c.IsActive)
             .OrderBy(c => c.Name)
@@ -80,6 +81,8 @@ public class CreditCardService : ICreditCardService
                 DueDay = card.DueDay,
                 ColorHex = card.ColorHex,
                 Brand = card.Brand,
+                AccountId = card.AccountId,
+                AccountName = card.Account?.Name,
                 IsActive = card.IsActive,
                 TotalUsedLimit = totalUsed,
                 AvailableLimit = Math.Max(0, card.Limit - totalUsed),
@@ -108,6 +111,7 @@ public class CreditCardService : ICreditCardService
             DueDay = dto.DueDay,
             ColorHex = string.IsNullOrWhiteSpace(dto.ColorHex) ? "#8A05BE" : dto.ColorHex.Trim(),
             Brand = string.IsNullOrWhiteSpace(dto.Brand) ? "Mastercard" : dto.Brand.Trim(),
+            AccountId = dto.AccountId,
             IsActive = dto.IsActive,
             CreatedAt = DateTime.UtcNow
         };
@@ -129,6 +133,7 @@ public class CreditCardService : ICreditCardService
         card.DueDay = dto.DueDay;
         card.ColorHex = string.IsNullOrWhiteSpace(dto.ColorHex) ? "#8A05BE" : dto.ColorHex.Trim();
         card.Brand = string.IsNullOrWhiteSpace(dto.Brand) ? "Mastercard" : dto.Brand.Trim();
+        card.AccountId = dto.AccountId;
         card.IsActive = dto.IsActive;
 
         await _context.SaveChangesAsync();

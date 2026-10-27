@@ -16,6 +16,7 @@ import { InitialBalanceModalComponent } from './components/initial-balance-modal
 import { ResetModalComponent } from './components/reset-modal/reset-modal.component';
 import { CategoriesComponent } from './components/categories/categories.component';
 import { CreditCardsComponent } from './components/credit-cards/credit-cards.component';
+import { AccountsComponent } from './components/accounts/accounts.component';
 import { JwtInterceptor } from './services/jwt.interceptor';
 
 @NgModule({
@@ -31,7 +32,8 @@ import { JwtInterceptor } from './services/jwt.interceptor';
     InitialBalanceModalComponent,
     ResetModalComponent,
     CategoriesComponent,
-    CreditCardsComponent
+    CreditCardsComponent,
+    AccountsComponent
   ],
   imports: [
     BrowserModule,

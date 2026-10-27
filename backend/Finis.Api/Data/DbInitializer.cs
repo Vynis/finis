@@ -96,6 +96,26 @@ public static class DbInitializer
                 await cmd.ExecuteNonQueryAsync();
             }
 
+            // 1.1 Create Accounts table if it does not exist
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS `Accounts` (
+                        `Id` int NOT NULL AUTO_INCREMENT,
+                        `UserId` int NOT NULL,
+                        `Name` varchar(100) CHARACTER SET utf8mb4 NOT NULL,
+                        `Type` int NOT NULL DEFAULT 1,
+                        `InitialBalance` decimal(18,2) NOT NULL DEFAULT 0.00,
+                        `ColorHex` varchar(20) CHARACTER SET utf8mb4 NOT NULL DEFAULT '#10B981',
+                        `Icon` varchar(50) CHARACTER SET utf8mb4 NOT NULL DEFAULT 'person',
+                        `IsActive` tinyint(1) NOT NULL DEFAULT 1,
+                        `CreatedAt` datetime(6) NOT NULL,
+                        CONSTRAINT `PK_Accounts` PRIMARY KEY (`Id`),
+                        CONSTRAINT `FK_Accounts_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+                    ) CHARACTER SET=utf8mb4;";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
             // 2. Ensure new columns in Transactions table
             await EnsureColumnAsync(conn, "Transactions", "CreditCardId", "int NULL");
             await EnsureColumnAsync(conn, "Transactions", "InstallmentNumber", "int NULL");
@@ -104,8 +124,12 @@ public static class DbInitializer
             await EnsureColumnAsync(conn, "Transactions", "InvoiceYear", "int NULL");
             await EnsureColumnAsync(conn, "Transactions", "IsInvoicePayment", "tinyint(1) NOT NULL DEFAULT 0");
             await EnsureColumnAsync(conn, "Transactions", "RecurrenceGroupId", "varchar(50) NULL");
+            await EnsureColumnAsync(conn, "Transactions", "AccountId", "int NULL");
 
-            // 3. Ensure Index & Foreign key
+            // 2.1 Ensure new columns in CreditCards table
+            await EnsureColumnAsync(conn, "CreditCards", "AccountId", "int NULL");
+
+            // 3. Ensure Index & Foreign keys
             using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
@@ -121,6 +145,80 @@ public static class DbInitializer
                     addFkCmd.CommandText = "ALTER TABLE `Transactions` ADD CONSTRAINT `FK_Transactions_CreditCards_CreditCardId` FOREIGN KEY (`CreditCardId`) REFERENCES `CreditCards` (`Id`) ON DELETE SET NULL;";
                     try { await addFkCmd.ExecuteNonQueryAsync(); } catch { }
                 }
+            }
+
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM information_schema.TABLE_CONSTRAINTS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                      AND TABLE_NAME = 'Transactions' 
+                      AND CONSTRAINT_NAME = 'FK_Transactions_Accounts_AccountId';";
+                var fkCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                if (fkCount == 0)
+                {
+                    using var addFkCmd = conn.CreateCommand();
+                    addFkCmd.CommandText = "ALTER TABLE `Transactions` ADD CONSTRAINT `FK_Transactions_Accounts_AccountId` FOREIGN KEY (`AccountId`) REFERENCES `Accounts` (`Id`) ON DELETE SET NULL;";
+                    try { await addFkCmd.ExecuteNonQueryAsync(); } catch { }
+                }
+            }
+
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM information_schema.TABLE_CONSTRAINTS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                      AND TABLE_NAME = 'CreditCards' 
+                      AND CONSTRAINT_NAME = 'FK_CreditCards_Accounts_AccountId';";
+                var fkCount = Convert.ToInt32(await cmd.ExecuteScalarAsync());
+                if (fkCount == 0)
+                {
+                    using var addFkCmd = conn.CreateCommand();
+                    addFkCmd.CommandText = "ALTER TABLE `CreditCards` ADD CONSTRAINT `FK_CreditCards_Accounts_AccountId` FOREIGN KEY (`AccountId`) REFERENCES `Accounts` (`Id`) ON DELETE SET NULL;";
+                    try { await addFkCmd.ExecuteNonQueryAsync(); } catch { }
+                }
+            }
+
+            // 4. Automatic migration: Ensure each user has at least one account ("Conta Pessoal")
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    INSERT INTO `Accounts` (`UserId`, `Name`, `Type`, `InitialBalance`, `ColorHex`, `Icon`, `IsActive`, `CreatedAt`)
+                    SELECT u.`Id`, 'Conta Pessoal', 1, u.`InitialBalance`, '#10B981', 'person', 1, NOW()
+                    FROM `Users` u
+                    WHERE NOT EXISTS (SELECT 1 FROM `Accounts` a WHERE a.`UserId` = u.`Id`);";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // 5. Backfill any existing transactions and credit cards with NULL AccountId
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    UPDATE `Transactions` t
+                    JOIN (
+                        SELECT `UserId`, MIN(`Id`) AS `MinAccountId`
+                        FROM `Accounts`
+                        GROUP BY `UserId`
+                    ) a ON a.`UserId` = t.`UserId`
+                    SET t.`AccountId` = a.`MinAccountId`
+                    WHERE t.`AccountId` IS NULL;";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    UPDATE `CreditCards` c
+                    JOIN (
+                        SELECT `UserId`, MIN(`Id`) AS `MinAccountId`
+                        FROM `Accounts`
+                        GROUP BY `UserId`
+                    ) a ON a.`UserId` = c.`UserId`
+                    SET c.`AccountId` = a.`MinAccountId`
+                    WHERE c.`AccountId` IS NULL;";
+                await cmd.ExecuteNonQueryAsync();
             }
         }
         finally

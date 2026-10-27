@@ -12,4 +12,5 @@ public class User
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     public ICollection<Category> Categories { get; set; } = new List<Category>();
     public ICollection<CreditCard> CreditCards { get; set; } = new List<CreditCard>();
+    public ICollection<Account> Accounts { get; set; } = new List<Account>();
 }

@@ -26,12 +26,14 @@ public class TransactionsController : BaseApiController
         [FromQuery] int? month,
         [FromQuery] TransactionType? type,
         [FromQuery] int? categoryId,
-        [FromQuery] int? creditCardId)
+        [FromQuery] int? creditCardId,
+        [FromQuery] int? accountId)
     {
         var userId = GetUserId();
         var query = _context.Transactions
             .Include(t => t.Category)
             .Include(t => t.CreditCard)
+            .Include(t => t.Account)
             .Where(t => t.UserId == userId);
 
         if (year.HasValue)
@@ -59,6 +61,11 @@ public class TransactionsController : BaseApiController
             query = query.Where(t => t.CreditCardId == creditCardId.Value);
         }
 
+        if (accountId.HasValue)
+        {
+            query = query.Where(t => t.AccountId == accountId.Value);
+        }
+
         var list = await query
             .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.Id)
@@ -79,6 +86,9 @@ public class TransactionsController : BaseApiController
                 Status = t.Status,
                 PaymentMethod = t.PaymentMethod,
                 Notes = t.Notes,
+                AccountId = t.AccountId,
+                AccountName = t.Account != null ? t.Account.Name : null,
+                AccountColor = t.Account != null ? t.Account.ColorHex : null,
                 CreditCardId = t.CreditCardId,
                 CreditCardName = t.CreditCard != null ? t.CreditCard.Name : null,
                 InstallmentNumber = t.InstallmentNumber,
@@ -101,6 +111,7 @@ public class TransactionsController : BaseApiController
         var t = await _context.Transactions
             .Include(x => x.Category)
             .Include(x => x.CreditCard)
+            .Include(x => x.Account)
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
         if (t == null)
@@ -125,6 +136,9 @@ public class TransactionsController : BaseApiController
             Status = t.Status,
             PaymentMethod = t.PaymentMethod,
             Notes = t.Notes,
+            AccountId = t.AccountId,
+            AccountName = t.Account != null ? t.Account.Name : null,
+            AccountColor = t.Account != null ? t.Account.ColorHex : null,
             CreditCardId = t.CreditCardId,
             CreditCardName = t.CreditCard != null ? t.CreditCard.Name : null,
             InstallmentNumber = t.InstallmentNumber,
@@ -166,6 +180,29 @@ public class TransactionsController : BaseApiController
             }
         }
 
+        // Validate Account if specified, or resolve default
+        int? targetAccountId = dto.AccountId;
+        if (targetAccountId.HasValue)
+        {
+            var accountExists = await _context.Accounts.AnyAsync(a => a.Id == targetAccountId.Value && a.UserId == userId);
+            if (!accountExists)
+            {
+                return BadRequest(new { message = "Conta inválida ou não pertencente ao usuário." });
+            }
+        }
+        else
+        {
+            if (creditCard?.AccountId != null)
+            {
+                targetAccountId = creditCard.AccountId;
+            }
+            else
+            {
+                var defaultAccount = await _context.Accounts.FirstOrDefaultAsync(a => a.UserId == userId && a.IsActive);
+                targetAccountId = defaultAccount?.Id;
+            }
+        }
+
         int totalInstallments = Math.Max(1, dto.Installments ?? 1);
 
         // If credit card with multiple installments
@@ -193,6 +230,7 @@ public class TransactionsController : BaseApiController
                 var instTransaction = new Transaction
                 {
                     UserId = userId,
+                    AccountId = targetAccountId,
                     Date = instDate,
                     Type = dto.Type,
                     Amount = instAmount,
@@ -216,7 +254,14 @@ public class TransactionsController : BaseApiController
             await _context.SaveChangesAsync();
 
             var first = createdTransactions.First();
-            await _context.Entry(first).Reference(t => t.Category).LoadAsync();
+            if (first.CategoryId.HasValue)
+            {
+                await _context.Entry(first).Reference(t => t.Category).LoadAsync();
+            }
+            if (first.AccountId.HasValue)
+            {
+                await _context.Entry(first).Reference(t => t.Account).LoadAsync();
+            }
 
             return CreatedAtAction(nameof(GetById), new { id = first.Id }, new TransactionResponseDto
             {
@@ -235,6 +280,9 @@ public class TransactionsController : BaseApiController
                 Status = first.Status,
                 PaymentMethod = first.PaymentMethod,
                 Notes = first.Notes,
+                AccountId = first.AccountId,
+                AccountName = first.Account?.Name,
+                AccountColor = first.Account?.ColorHex,
                 CreditCardId = creditCard.Id,
                 CreditCardName = creditCard.Name,
                 InstallmentNumber = first.InstallmentNumber,
@@ -271,6 +319,7 @@ public class TransactionsController : BaseApiController
                 var recTransaction = new Transaction
                 {
                     UserId = userId,
+                    AccountId = targetAccountId,
                     Date = tDate,
                     Type = dto.Type,
                     Amount = dto.Amount,
@@ -294,6 +343,10 @@ public class TransactionsController : BaseApiController
             {
                 await _context.Entry(first).Reference(t => t.Category).LoadAsync();
             }
+            if (first.AccountId.HasValue)
+            {
+                await _context.Entry(first).Reference(t => t.Account).LoadAsync();
+            }
 
             return CreatedAtAction(nameof(GetById), new { id = first.Id }, new TransactionResponseDto
             {
@@ -312,6 +365,9 @@ public class TransactionsController : BaseApiController
                 Status = first.Status,
                 PaymentMethod = first.PaymentMethod,
                 Notes = first.Notes,
+                AccountId = first.AccountId,
+                AccountName = first.Account?.Name,
+                AccountColor = first.Account?.ColorHex,
                 RecurrenceGroupId = first.RecurrenceGroupId,
                 CreatedAt = first.CreatedAt
             });
@@ -335,6 +391,7 @@ public class TransactionsController : BaseApiController
         var transaction = new Transaction
         {
             UserId = userId,
+            AccountId = targetAccountId,
             Date = dto.Date,
             Type = dto.Type,
             Amount = dto.Amount,
@@ -356,6 +413,10 @@ public class TransactionsController : BaseApiController
 
         // Load relations
         await _context.Entry(transaction).Reference(t => t.Category).LoadAsync();
+        if (transaction.AccountId.HasValue)
+        {
+            await _context.Entry(transaction).Reference(t => t.Account).LoadAsync();
+        }
 
         return CreatedAtAction(nameof(GetById), new { id = transaction.Id }, new TransactionResponseDto
         {
@@ -374,6 +435,9 @@ public class TransactionsController : BaseApiController
             Status = transaction.Status,
             PaymentMethod = transaction.PaymentMethod,
             Notes = transaction.Notes,
+            AccountId = transaction.AccountId,
+            AccountName = transaction.Account?.Name,
+            AccountColor = transaction.Account?.ColorHex,
             CreditCardId = creditCard?.Id,
             CreditCardName = creditCard?.Name,
             InstallmentNumber = transaction.InstallmentNumber,
@@ -392,6 +456,7 @@ public class TransactionsController : BaseApiController
         var transaction = await _context.Transactions
             .Include(t => t.Category)
             .Include(t => t.CreditCard)
+            .Include(t => t.Account)
             .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
 
         if (transaction == null)
@@ -408,6 +473,18 @@ public class TransactionsController : BaseApiController
             {
                 return BadRequest(new { message = "Categoria inválida." });
             }
+        }
+
+        if (dto.AccountId.HasValue)
+        {
+            var accountExists = await _context.Accounts.AnyAsync(a =>
+                a.Id == dto.AccountId.Value && a.UserId == userId);
+
+            if (!accountExists)
+            {
+                return BadRequest(new { message = "Conta inválida." });
+            }
+            transaction.AccountId = dto.AccountId.Value;
         }
 
         CreditCard? creditCard = null;
@@ -441,6 +518,10 @@ public class TransactionsController : BaseApiController
         {
             await _context.Entry(transaction).Reference(t => t.CreditCard).LoadAsync();
         }
+        if (transaction.AccountId.HasValue)
+        {
+            await _context.Entry(transaction).Reference(t => t.Account).LoadAsync();
+        }
 
         return Ok(new TransactionResponseDto
         {
@@ -459,6 +540,62 @@ public class TransactionsController : BaseApiController
             Status = transaction.Status,
             PaymentMethod = transaction.PaymentMethod,
             Notes = transaction.Notes,
+            AccountId = transaction.AccountId,
+            AccountName = transaction.Account?.Name,
+            AccountColor = transaction.Account?.ColorHex,
+            CreditCardId = transaction.CreditCardId,
+            CreditCardName = transaction.CreditCard?.Name,
+            InstallmentNumber = transaction.InstallmentNumber,
+            TotalInstallments = transaction.TotalInstallments,
+            InvoiceMonth = transaction.InvoiceMonth,
+            InvoiceYear = transaction.InvoiceYear,
+            IsInvoicePayment = transaction.IsInvoicePayment,
+            RecurrenceGroupId = transaction.RecurrenceGroupId,
+            CreatedAt = transaction.CreatedAt
+        });
+    }
+
+    [HttpPatch("{id:int}/toggle-status")]
+    public async Task<ActionResult<TransactionResponseDto>> ToggleStatus(int id)
+    {
+        var userId = GetUserId();
+        var transaction = await _context.Transactions
+            .Include(t => t.Category)
+            .Include(t => t.CreditCard)
+            .Include(t => t.Account)
+            .FirstOrDefaultAsync(t => t.Id == id && t.UserId == userId);
+
+        if (transaction == null)
+        {
+            return NotFound(new { message = "Transação não encontrada." });
+        }
+
+        transaction.Status = (transaction.Status == TransactionStatus.Realizado)
+            ? TransactionStatus.Previsto
+            : TransactionStatus.Realizado;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new TransactionResponseDto
+        {
+            Id = transaction.Id,
+            Date = transaction.Date,
+            Day = transaction.Day,
+            Month = transaction.Month,
+            Year = transaction.Year,
+            Type = transaction.Type,
+            Amount = transaction.Amount,
+            Description = transaction.Description,
+            CategoryId = transaction.CategoryId,
+            CategoryName = transaction.Category != null ? transaction.Category.Name : "Sem categoria",
+            CategoryColor = transaction.Category != null ? transaction.Category.ColorHex : "#6B7280",
+            CategoryIcon = transaction.Category != null ? transaction.Category.Icon : "tag",
+            Status = transaction.Status,
+            PaymentMethod = transaction.PaymentMethod,
+            Notes = transaction.Notes,
+            AccountId = transaction.AccountId,
+            AccountName = transaction.Account?.Name,
+            AccountColor = transaction.Account?.ColorHex,
             CreditCardId = transaction.CreditCardId,
             CreditCardName = transaction.CreditCard?.Name,
             InstallmentNumber = transaction.InstallmentNumber,

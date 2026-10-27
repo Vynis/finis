@@ -19,6 +19,36 @@ export enum PaymentMethod {
   Outro = 7
 }
 
+export enum AccountType {
+  Pessoal = 1,
+  Empresa = 2,
+  Investimento = 3,
+  Outro = 4
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  type: AccountType;
+  typeName: string;
+  initialBalance: number;
+  currentBalance: number;
+  colorHex: string;
+  icon: string;
+  isActive: boolean;
+  transactionsCount: number;
+  createdAt: string;
+}
+
+export interface AccountCreateUpdate {
+  name: string;
+  type: AccountType;
+  initialBalance: number;
+  colorHex?: string;
+  icon?: string;
+  isActive?: boolean;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -50,6 +80,8 @@ export interface CreditCard {
   dueDay: number;
   colorHex: string;
   brand: string;
+  accountId?: number;
+  accountName?: string;
   isActive: boolean;
   totalUsedLimit: number;
   availableLimit: number;
@@ -64,6 +96,7 @@ export interface CreditCardCreateUpdate {
   dueDay: number;
   colorHex?: string;
   brand?: string;
+  accountId?: number;
   isActive?: boolean;
 }
 
@@ -108,6 +141,9 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   paymentMethodName: string;
   notes?: string;
+  accountId?: number;
+  accountName?: string;
+  accountColor?: string;
   creditCardId?: number;
   creditCardName?: string;
   installmentNumber?: number;
@@ -129,6 +165,7 @@ export interface TransactionCreateUpdate {
   status: TransactionStatus;
   paymentMethod: PaymentMethod;
   notes?: string;
+  accountId?: number;
   creditCardId?: number;
   installments?: number;
   isRecurring?: boolean;
@@ -201,6 +238,13 @@ export interface CategoryExpenseShare {
   percentage: number;
 }
 
+export interface OverdueSummary {
+  totalCount: number;
+  totalExpenses: number;
+  totalIncome: number;
+  transactions: Transaction[];
+}
+
 export interface DashboardSummary {
   year: number;
   month: number;
@@ -214,6 +258,13 @@ export interface DashboardSummary {
   monthCreditCardTotal?: number;
   monthPerformance: number;
   monthSavingsRate: number;
+  realizedIncome: number;
+  pendingIncome: number;
+  realizedExpenses: number;
+  pendingExpenses: number;
+  realizedPerformance: number;
+  pendingPerformance: number;
+  overdueSummary: OverdueSummary;
   recentTransactions: Transaction[];
   dailyTrend: DailyTrendPoint[];
   categoryDistribution: CategoryExpenseShare[];

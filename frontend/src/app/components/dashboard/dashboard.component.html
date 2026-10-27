@@ -2,7 +2,12 @@
   <!-- Top Bar: Navigation & Month Selector -->
   <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
-      <h2 class="fw-bold mb-1 text-dark">Dashboard Termômetro</h2>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <h2 class="fw-bold mb-0 text-dark">Dashboard Termômetro</h2>
+        <span *ngIf="summary && summary.overdueSummary && summary.overdueSummary.totalCount > 0" class="badge bg-warning text-dark px-2 py-1" style="font-size: 0.75rem;" title="Você tem lançamentos vencidos não compensados">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ summary.overdueSummary.totalCount }} atrasado{{ summary.overdueSummary.totalCount > 1 ? 's' : '' }}
+        </span>
+      </div>
       <p class="text-muted small mb-0">Visão consolidada da sua saúde financeira diária e mensal</p>
     </div>
 
@@ -36,6 +41,107 @@
   </div>
 
   <div *ngIf="!loading && summary">
+    <!-- Overdue Transactions Alert Banner -->
+    <div *ngIf="summary.overdueSummary && summary.overdueSummary.totalCount > 0" class="card border-0 mb-4 shadow-sm" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 5px solid #F59E0B !important; border-radius: 14px;">
+      <div class="card-body p-3 p-md-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-warning text-white flex-shrink-0" style="width: 44px; height: 44px;">
+              <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            </div>
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <h6 class="fw-bold mb-0 text-dark">
+                  {{ summary.overdueSummary.totalCount }} {{ summary.overdueSummary.totalCount === 1 ? 'lançamento atrasado' : 'lançamentos atrasados' }}
+                </h6>
+                <span class="badge bg-warning text-dark fw-bold">Pendente</span>
+              </div>
+              <p class="text-secondary small mb-0 mt-1">
+                Lançamentos com vencimento anterior a hoje que continuam marcados como <em>Previsto</em>.
+                <span *ngIf="summary.overdueSummary.totalExpenses > 0">
+                  Despesas vencidas: <strong class="text-danger">R$ {{ summary.overdueSummary.totalExpenses | number:'1.2-2' }}</strong>
+                </span>
+                <span *ngIf="summary.overdueSummary.totalIncome > 0">
+                  • Receitas pendentes: <strong class="text-success">R$ {{ summary.overdueSummary.totalIncome | number:'1.2-2' }}</strong>
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-warning btn-sm fw-bold px-3 py-1 rounded-pill shadow-sm" (click)="toggleOverdueDetails()">
+              <i class="bi" [ngClass]="showOverdueDetails ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+              {{ showOverdueDetails ? 'Ocultar Lançamentos' : 'Ver Lançamentos Atrasados' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Expandable Overdue Transactions Table -->
+        <div *ngIf="showOverdueDetails" class="mt-3 pt-3 border-top border-warning-subtle">
+          <div class="table-responsive bg-white rounded-3 shadow-sm border">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-muted text-uppercase">
+                <tr>
+                  <th>Vencimento</th>
+                  <th>Descrição</th>
+                  <th>Categoria</th>
+                  <th>Conta</th>
+                  <th class="text-end">Valor</th>
+                  <th class="text-center" style="width: 140px;">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ot of summary.overdueSummary.transactions">
+                  <td class="small">
+                    <span class="fw-bold text-danger">{{ ot.date | date:'dd/MM/yyyy' }}</span>
+                    <span class="badge bg-danger-subtle text-danger ms-1" style="font-size: 0.65rem;">
+                      {{ getOverdueLabel(ot.date) }}
+                    </span>
+                  </td>
+                  <td class="fw-semibold text-dark">
+                    {{ ot.description }}
+                    <i *ngIf="ot.isRecurring" class="bi bi-arrow-repeat text-primary ms-1" title="Recorrente"></i>
+                  </td>
+                  <td>
+                    <span class="badge rounded-pill text-white px-2 py-1 small" [style.background-color]="ot.categoryColor">
+                      {{ ot.categoryName }}
+                    </span>
+                  </td>
+                  <td class="small text-muted">
+                    <span *ngIf="ot.accountName">
+                      <i class="bi bi-wallet2 me-1" [style.color]="ot.accountColor || '#10B981'"></i>{{ ot.accountName }}
+                    </span>
+                    <span *ngIf="!ot.accountName">-</span>
+                  </td>
+                  <td class="mono-num fw-bold text-end" [ngClass]="ot.type === 1 ? 'text-success' : 'text-danger'">
+                    {{ ot.type === 1 ? '+' : '-' }} R$ {{ ot.amount | number:'1.2-2' }}
+                  </td>
+                  <td class="text-center">
+                    <ng-container *ngIf="ot.id > 0">
+                      <button
+                        class="btn btn-sm btn-success rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1 shadow-sm"
+                        style="font-size: 0.75rem;"
+                        (click)="onToggleStatus(ot)"
+                        title="Marcar como Compensado agora"
+                      >
+                        <i class="bi bi-check-lg"></i>
+                        <span>Compensar</span>
+                      </button>
+                    </ng-container>
+                    <ng-container *ngIf="ot.id < 0">
+                      <a routerLink="/cartoes" class="btn btn-sm btn-outline-primary rounded-pill py-0 px-2" style="font-size: 0.75rem;">
+                        Pagar Fatura
+                      </a>
+                    </ng-container>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Top KPI Cards Grid -->
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4">
       <!-- Termômetro: Saldo Atual -->
@@ -68,9 +174,10 @@
           <h4 class="mono-num fw-bold text-dark mb-1">
             R$ {{ summary.monthIncome | number:'1.2-2' }}
           </h4>
-          <span class="text-muted" style="font-size: 0.72rem;">
-            Receitas do mês
-          </span>
+          <div class="d-flex justify-content-between text-muted" style="font-size: 0.70rem;">
+            <span>Realizado: <strong class="text-success">R$ {{ (summary.realizedIncome || 0) | number:'1.0-0' }}</strong></span>
+            <span>Previsto: <strong>R$ {{ (summary.pendingIncome || 0) | number:'1.0-0' }}</strong></span>
+          </div>
         </div>
       </div>
 
@@ -86,10 +193,9 @@
           <h4 class="mono-num fw-bold text-danger mb-1">
             R$ {{ summary.monthTotalExpenses | number:'1.2-2' }}
           </h4>
-          <div class="d-flex gap-1 text-muted" style="font-size: 0.72rem;">
-            <span>Fixas: R$ {{ summary.monthFixedExpenses | number:'1.0-0' }}</span>
-            <span>•</span>
-            <span>Diário: R$ {{ summary.monthDailyExpenses | number:'1.0-0' }}</span>
+          <div class="d-flex justify-content-between text-muted" style="font-size: 0.70rem;">
+            <span>Pago: <strong class="text-danger">R$ {{ (summary.realizedExpenses || 0) | number:'1.0-0' }}</strong></span>
+            <span>A pagar: <strong>R$ {{ (summary.pendingExpenses || 0) | number:'1.0-0' }}</strong></span>
           </div>
         </div>
       </div>
@@ -128,6 +234,129 @@
           <span class="text-muted" style="font-size: 0.72rem;">
             {{ summary.monthPerformance >= 0 ? 'Superávit no mês' : 'Déficit no mês' }}
           </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card de Valor Previsto x Realizado -->
+    <div class="card card-finis p-4 mb-4">
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+          <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+            <i class="bi bi-pie-chart text-primary"></i> Balanço: Previsto vs. Realizado
+          </h5>
+          <p class="text-muted small mb-0">
+            Comparativo do que já foi compensado e o que ainda está previsto para o mês de {{ summary.monthName }}
+          </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 d-inline-flex align-items-center gap-1">
+            <i class="bi bi-check-circle-fill"></i> Realizado (Compensado)
+          </span>
+          <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 d-inline-flex align-items-center gap-1">
+            <i class="bi bi-clock-history"></i> Previsto (Pendente)
+          </span>
+        </div>
+      </div>
+
+      <div class="row g-3 align-items-stretch">
+        <!-- Receitas -->
+        <div class="col-12 col-md-4">
+          <div class="p-3 bg-light rounded-4 h-100 border">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-bold text-dark small text-uppercase">
+                <i class="bi bi-arrow-down-left text-success me-1"></i> Receitas
+              </span>
+              <span class="badge bg-success-subtle text-success border border-success-subtle fw-semibold">
+                {{ getIncomeProgress() }}% Realizado
+              </span>
+            </div>
+            <h4 class="mono-num fw-bold text-dark mb-2">
+              R$ {{ summary.monthIncome | number:'1.2-2' }}
+            </h4>
+
+            <div class="progress mb-3" style="height: 8px; border-radius: 4px; background-color: #E2E8F0;">
+              <div class="progress-bar bg-success" role="progressbar" [style.width.%]="getIncomeProgress()"></div>
+            </div>
+
+            <div class="d-flex justify-content-between small pt-2 border-top">
+              <div>
+                <span class="text-muted d-block" style="font-size: 0.70rem;">REALIZADO</span>
+                <strong class="text-success mono-num">R$ {{ (summary.realizedIncome || 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="text-end">
+                <span class="text-muted d-block" style="font-size: 0.70rem;">PREVISTO</span>
+                <strong class="text-secondary mono-num">R$ {{ (summary.pendingIncome || 0) | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Despesas -->
+        <div class="col-12 col-md-4">
+          <div class="p-3 bg-light rounded-4 h-100 border">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="fw-bold text-dark small text-uppercase">
+                <i class="bi bi-arrow-up-right text-danger me-1"></i> Despesas
+              </span>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-semibold">
+                {{ getExpensesProgress() }}% Pago
+              </span>
+            </div>
+            <h4 class="mono-num fw-bold text-dark mb-2">
+              R$ {{ summary.monthTotalExpenses | number:'1.2-2' }}
+            </h4>
+
+            <div class="progress mb-3" style="height: 8px; border-radius: 4px; background-color: #E2E8F0;">
+              <div class="progress-bar bg-danger" role="progressbar" [style.width.%]="getExpensesProgress()"></div>
+            </div>
+
+            <div class="d-flex justify-content-between small pt-2 border-top">
+              <div>
+                <span class="text-muted d-block" style="font-size: 0.70rem;">COMPENSADO / PAGO</span>
+                <strong class="text-danger mono-num">R$ {{ (summary.realizedExpenses || 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="text-end">
+                <span class="text-muted d-block" style="font-size: 0.70rem;">A PAGAR / PREVISTO</span>
+                <strong class="text-secondary mono-num">R$ {{ (summary.pendingExpenses || 0) | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultado Líquido -->
+        <div class="col-12 col-md-4">
+          <div class="p-3 bg-light rounded-4 h-100 border d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold text-dark small text-uppercase">
+                  <i class="bi bi-wallet2 text-primary me-1"></i> Resultado Líquido
+                </span>
+                <span class="badge" [ngClass]="summary.monthPerformance >= 0 ? 'bg-primary-subtle text-primary' : 'bg-warning-subtle text-warning'">
+                  {{ summary.monthPerformance >= 0 ? 'Superávit' : 'Déficit' }}
+                </span>
+              </div>
+              <h4 class="mono-num fw-bold mb-1" [ngClass]="summary.monthPerformance >= 0 ? 'text-primary' : 'text-danger'">
+                {{ summary.monthPerformance >= 0 ? '+' : '' }}R$ {{ summary.monthPerformance | number:'1.2-2' }}
+              </h4>
+              <span class="text-muted small d-block mb-3">Previsão no fechamento do mês</span>
+            </div>
+
+            <div class="d-flex justify-content-between small pt-2 border-top">
+              <div>
+                <span class="text-muted d-block" style="font-size: 0.70rem;">REALIZADO ATÉ HOJE</span>
+                <strong class="mono-num" [ngClass]="(summary.realizedPerformance || 0) >= 0 ? 'text-success' : 'text-danger'">
+                  {{ (summary.realizedPerformance || 0) >= 0 ? '+' : '' }}R$ {{ (summary.realizedPerformance || 0) | number:'1.2-2' }}
+                </strong>
+              </div>
+              <div class="text-end">
+                <span class="text-muted d-block" style="font-size: 0.70rem;">PREVISTO RESTANTE</span>
+                <strong class="mono-num text-secondary">
+                  {{ (summary.pendingPerformance || 0) >= 0 ? '+' : '' }}R$ {{ (summary.pendingPerformance || 0) | number:'1.2-2' }}
+                </strong>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -227,13 +456,14 @@
                   <th>Descrição</th>
                   <th>Categoria</th>
                   <th>Forma</th>
+                  <th>Status</th>
                   <th class="text-end">Valor</th>
-                  <th class="text-center" style="width: 90px;">Ações</th>
+                  <th class="text-center" style="width: 120px;">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 <tr *ngIf="summary.recentTransactions.length === 0">
-                  <td colspan="7" class="text-center py-4 text-muted small">
+                  <td colspan="8" class="text-center py-4 text-muted small">
                     Nenhuma transação cadastrada. Clique no botão <strong>+ Novo Lançamento</strong> para adicionar!
                   </td>
                 </tr>
@@ -249,8 +479,13 @@
                     </span>
                   </td>
                   <td class="fw-semibold text-dark">
-                    {{ t.description }}
-                    <i *ngIf="t.isRecurring || t.recurrenceGroupId" class="bi bi-arrow-repeat text-primary ms-1" title="Lançamento Recorrente Mensal"></i>
+                    <div>
+                      {{ t.description }}
+                      <i *ngIf="t.isRecurring || t.recurrenceGroupId" class="bi bi-arrow-repeat text-primary ms-1" title="Lançamento Recorrente Mensal"></i>
+                    </div>
+                    <span *ngIf="t.accountName" class="badge bg-light text-muted border py-0 px-1" style="font-size: 0.65rem;">
+                      <i class="bi bi-wallet2 me-1" [style.color]="t.accountColor || '#10B981'"></i>{{ t.accountName }}
+                    </span>
                   </td>
                   <td>
                     <span class="badge rounded-pill text-white px-2 py-1 small" [style.background-color]="t.categoryColor">
@@ -270,11 +505,31 @@
                     </span>
                     <span *ngIf="t.paymentMethod !== 2">{{ t.paymentMethodName }}</span>
                   </td>
+                  <td>
+                    <span
+                      class="badge cursor-pointer user-select-none d-inline-flex align-items-center gap-1 shadow-sm"
+                      [ngClass]="t.status === 1 ? 'bg-success-subtle text-success border border-success-subtle' : (isOverdue(t.date, t.status) ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle')"
+                      (click)="onToggleStatus(t)"
+                      [title]="t.status === 1 ? 'Compensado (Clique para alternar para Previsto)' : (isOverdue(t.date, t.status) ? 'Atrasado! (Clique para compensar)' : 'Previsto (Clique para alternar para Compensado)')"
+                    >
+                      <i class="bi" [ngClass]="t.status === 1 ? 'bi-check-circle-fill' : (isOverdue(t.date, t.status) ? 'bi-exclamation-triangle-fill' : 'bi-clock-history')"></i>
+                      <span>{{ t.status === 1 ? 'Compensado' : (isOverdue(t.date, t.status) ? 'Atrasado' : 'Previsto') }}</span>
+                    </span>
+                  </td>
                   <td class="mono-num fw-bold text-end" [ngClass]="t.type === 1 ? 'text-success' : 'text-danger'">
                     {{ t.type === 1 ? '+' : '-' }} R$ {{ t.amount | number:'1.2-2' }}
                   </td>
                   <td class="text-center">
                     <div class="d-flex align-items-center justify-content-center gap-1">
+                      <button
+                        class="btn btn-light btn-sm rounded-circle p-1"
+                        [ngClass]="t.status === 1 ? 'text-success' : (isOverdue(t.date, t.status) ? 'text-danger' : 'text-secondary')"
+                        style="width: 28px; height: 28px;"
+                        (click)="onToggleStatus(t)"
+                        [title]="t.status === 1 ? 'Compensado (Clique para marcar como Previsto)' : (isOverdue(t.date, t.status) ? 'Atrasado! (Clique para marcar como Compensado)' : 'Previsto (Clique para marcar como Compensado)')"
+                      >
+                        <i class="bi" [ngClass]="t.status === 1 ? 'bi-check-circle-fill' : (isOverdue(t.date, t.status) ? 'bi-exclamation-circle' : 'bi-circle')"></i>
+                      </button>
                       <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="onEdit(t)" title="Editar Lançamento">
                         <i class="bi bi-pencil text-secondary"></i>
                       </button>

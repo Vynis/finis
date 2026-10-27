@@ -13,6 +13,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   loading = false;
   selectedYear: number = new Date().getFullYear();
   selectedMonth: number = new Date().getMonth() + 1;
+  showOverdueDetails: boolean = false;
   private refreshSub?: Subscription;
 
   availableYears: number[] = [2024, 2025, 2026, 2027];
@@ -88,6 +89,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.editTransaction.emit(t);
   }
 
+  onToggleStatus(t: any): void {
+    if (t.id <= 0) return;
+    this.api.toggleTransactionStatus(t.id).subscribe();
+  }
+
   onDelete(t: any): void {
     if (t.recurrenceGroupId || t.isRecurring) {
       const ans = confirm(`"${t.description}" faz parte de uma série recorrente.\n\nDeseja excluir também as repetições futuras deste lançamento?\n\n• Clique [OK] para excluir este e os futuros.\n• Clique [Cancelar] se deseja excluir apenas este mês.`);
@@ -103,6 +109,43 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.api.deleteTransaction(t.id).subscribe();
       }
     }
+  }
+
+  toggleOverdueDetails(): void {
+    this.showOverdueDetails = !this.showOverdueDetails;
+  }
+
+  getOverdueLabel(dateVal: string | Date): string {
+    const d = new Date(dateVal);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    const diffTime = today.getTime() - d.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return 'Vence hoje';
+    if (diffDays === 1) return 'Venceu ontem';
+    return `${diffDays} dias de atraso`;
+  }
+
+  isOverdue(dateVal: string | Date, status: number): boolean {
+    if (status !== 2) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(dateVal);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() < today.getTime();
+  }
+
+  getIncomeProgress(): number {
+    if (!this.summary || this.summary.monthIncome <= 0) return 0;
+    const pct = Math.round(((this.summary.realizedIncome || 0) / this.summary.monthIncome) * 100);
+    return Math.min(Math.max(pct, 0), 100);
+  }
+
+  getExpensesProgress(): number {
+    if (!this.summary || this.summary.monthTotalExpenses <= 0) return 0;
+    const pct = Math.round(((this.summary.realizedExpenses || 0) / this.summary.monthTotalExpenses) * 100);
+    return Math.min(Math.max(pct, 0), 100);
   }
 
   // Helper for SVG chart points

@@ -21,6 +21,10 @@ public class Transaction
     public int? CategoryId { get; set; }
     public Category? Category { get; set; }
 
+    // Multi-Account Integration (Pessoal vs Empresa)
+    public int? AccountId { get; set; }
+    public Account? Account { get; set; }
+
     // Credit Card Integration
     public int? CreditCardId { get; set; }
     public CreditCard? CreditCard { get; set; }

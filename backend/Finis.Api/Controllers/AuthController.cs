@@ -118,6 +118,18 @@ public class AuthController : BaseApiController
         }
 
         user.InitialBalance = dto.InitialBalance;
+
+        // Also update the primary account's initial balance if one exists
+        var primaryAccount = await _context.Accounts
+            .Where(a => a.UserId == userId && a.IsActive)
+            .OrderBy(a => a.Id)
+            .FirstOrDefaultAsync();
+
+        if (primaryAccount != null)
+        {
+            primaryAccount.InitialBalance = dto.InitialBalance;
+        }
+
         await _context.SaveChangesAsync();
 
         return Ok(new UserProfileDto
@@ -159,6 +171,25 @@ public class AuthController : BaseApiController
             .Where(c => c.UserId == userId)
             .ToListAsync();
         _context.CreditCards.RemoveRange(userCards);
+
+        // Reset accounts: keep primary account with 0.00 initial balance, remove others
+        var userAccounts = await _context.Accounts
+            .Where(a => a.UserId == userId)
+            .OrderBy(a => a.Id)
+            .ToListAsync();
+
+        if (userAccounts.Any())
+        {
+            var first = userAccounts.First();
+            first.InitialBalance = 0.00m;
+            first.Name = "Conta Pessoal";
+            first.Type = AccountType.Pessoal;
+
+            if (userAccounts.Count > 1)
+            {
+                _context.Accounts.RemoveRange(userAccounts.Skip(1));
+            }
+        }
 
         // Reset initial balance to 0.00
         user.InitialBalance = 0.00m;

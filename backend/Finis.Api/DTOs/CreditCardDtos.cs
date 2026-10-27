@@ -27,6 +27,7 @@ public class CreditCardCreateUpdateDto
     [StringLength(50)]
     public string Brand { get; set; } = "Mastercard";
 
+    public int? AccountId { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
@@ -39,6 +40,8 @@ public class CreditCardResponseDto
     public int DueDay { get; set; }
     public string ColorHex { get; set; } = "#8A05BE";
     public string Brand { get; set; } = "Mastercard";
+    public int? AccountId { get; set; }
+    public string? AccountName { get; set; }
     public bool IsActive { get; set; }
     public decimal TotalUsedLimit { get; set; }
     public decimal AvailableLimit { get; set; }

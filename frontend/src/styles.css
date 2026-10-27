@@ -70,6 +70,10 @@ body {
   transition: width 0.4s ease;
 }
 
+.cursor-pointer {
+  cursor: pointer;
+}
+
 /* Clean Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

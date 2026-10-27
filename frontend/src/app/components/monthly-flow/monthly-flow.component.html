@@ -215,6 +215,9 @@
                               <div class="fw-semibold text-dark">
                                 {{ t.description }}
                                 <i *ngIf="t.isRecurring || t.recurrenceGroupId" class="bi bi-arrow-repeat text-primary ms-1" title="Lançamento Recorrente Mensal"></i>
+                                <span *ngIf="t.accountName" class="badge bg-light text-muted border py-0 px-1 ms-1" style="font-size: 0.65rem;">
+                                  <i class="bi bi-wallet2 me-1" [style.color]="t.accountColor || '#10B981'"></i>{{ t.accountName }}
+                                </span>
                               </div>
                               <div *ngIf="t.notes" class="text-muted" style="font-size: 0.72rem;">
                                 <i class="bi bi-info-circle me-1"></i>{{ t.notes }}
@@ -234,20 +237,45 @@
                               <span *ngIf="t.paymentMethod !== 2">{{ t.paymentMethodName }}</span>
                             </td>
                             <td>
-                              <span class="badge" [ngClass]="t.status === 1 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'">
-                                {{ t.statusName }}
-                              </span>
+                              <ng-container *ngIf="t.id > 0">
+                                <span
+                                  class="badge cursor-pointer user-select-none d-inline-flex align-items-center gap-1 shadow-sm"
+                                  [ngClass]="t.status === 1 ? 'bg-success-subtle text-success border border-success-subtle' : (isOverdue(t.date, t.status) ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle')"
+                                  (click)="onToggleStatus(t, $event)"
+                                  [title]="t.status === 1 ? 'Compensado (Clique para alternar para Previsto)' : (isOverdue(t.date, t.status) ? 'Atrasado! (Clique para compensar)' : 'Previsto (Clique para alternar para Compensado)')"
+                                >
+                                  <i class="bi" [ngClass]="t.status === 1 ? 'bi-check-circle-fill' : (isOverdue(t.date, t.status) ? 'bi-exclamation-triangle-fill' : 'bi-clock-history')"></i>
+                                  <span>{{ t.status === 1 ? 'Compensado' : (isOverdue(t.date, t.status) ? 'Atrasado' : 'Previsto') }}</span>
+                                </span>
+                              </ng-container>
+                              <ng-container *ngIf="t.id <= 0">
+                                <span
+                                  class="badge d-inline-flex align-items-center gap-1"
+                                  [ngClass]="isOverdue(t.date, t.status) ? 'bg-danger-subtle text-danger border border-danger-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'"
+                                >
+                                  <i class="bi" [ngClass]="isOverdue(t.date, t.status) ? 'bi-exclamation-triangle-fill' : 'bi-clock-history'"></i>
+                                  <span>{{ isOverdue(t.date, t.status) ? 'Fatura Atrasada' : 'Previsto' }}</span>
+                                </span>
+                              </ng-container>
                             </td>
                             <td class="mono-num fw-bold text-end" [ngClass]="t.type === 1 ? 'text-success' : 'text-danger'">
                               {{ t.type === 1 ? '+' : '-' }} R$ {{ t.amount | number:'1.2-2' }}
                             </td>
                             <td class="text-end">
                               <ng-container *ngIf="t.id > 0">
-                                <button class="btn btn-link btn-sm text-secondary p-1" (click)="onEdit(t, $event)" title="Editar">
-                                  <i class="bi bi-pencil"></i>
+                                <button
+                                  class="btn btn-link btn-sm p-1"
+                                  [ngClass]="t.status === 1 ? 'text-success' : (isOverdue(t.date, t.status) ? 'text-danger' : 'text-secondary')"
+                                  (click)="onToggleStatus(t, $event)"
+                                  [title]="t.status === 1 ? 'Compensado (Clique para marcar como Previsto)' : (isOverdue(t.date, t.status) ? 'Atrasado! (Clique para marcar como Compensado)' : 'Previsto (Clique para marcar como Compensado)')"
+                                >
+                                  <i class="bi fs-5" [ngClass]="t.status === 1 ? 'bi-check-circle-fill' : (isOverdue(t.date, t.status) ? 'bi-exclamation-circle' : 'bi-circle')"></i>
                                 </button>
-                                <button class="btn btn-link btn-sm text-danger p-1" (click)="onDelete(t, $event)" title="Excluir">
-                                  <i class="bi bi-trash"></i>
+                                <button class="btn btn-link btn-sm text-secondary p-1" (click)="onEdit(t, $event)" title="Editar Lançamento">
+                                  <i class="bi bi-pencil fs-6"></i>
+                                </button>
+                                <button class="btn btn-link btn-sm text-danger p-1" (click)="onDelete(t, $event)" title="Excluir Lançamento">
+                                  <i class="bi bi-trash fs-6"></i>
                                 </button>
                               </ng-container>
                               <ng-container *ngIf="t.id < 0">

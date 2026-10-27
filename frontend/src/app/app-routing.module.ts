@@ -7,6 +7,7 @@ import { MonthlyFlowComponent } from './components/monthly-flow/monthly-flow.com
 import { EconomyReportComponent } from './components/economy-report/economy-report.component';
 import { CategoriesComponent } from './components/categories/categories.component';
 import { CreditCardsComponent } from './components/credit-cards/credit-cards.component';
+import { AccountsComponent } from './components/accounts/accounts.component';
 import { AuthGuard } from './services/auth.guard';
 
 const routes: Routes = [
@@ -17,6 +18,7 @@ const routes: Routes = [
   { path: 'economia', component: EconomyReportComponent, canActivate: [AuthGuard] },
   { path: 'categorias', component: CategoriesComponent, canActivate: [AuthGuard] },
   { path: 'cartoes', component: CreditCardsComponent, canActivate: [AuthGuard] },
+  { path: 'contas', component: AccountsComponent, canActivate: [AuthGuard] },
   { path: '', redirectTo: '/dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: '/dashboard' }
 ];

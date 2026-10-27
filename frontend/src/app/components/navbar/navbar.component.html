@@ -39,16 +39,57 @@
             <i class="bi bi-credit-card-2-front me-1"></i> Cartões
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" routerLink="/contas" routerLinkActive="active text-success fw-semibold">
+            <i class="bi bi-wallet2 me-1"></i> Contas
+          </a>
+        </li>
       </ul>
 
       <div class="d-flex align-items-center gap-3">
-        <!-- Saldo Inicial Badge -->
-        <button class="btn btn-outline-light btn-sm d-flex align-items-center gap-1 rounded-pill px-3" (click)="onEditBalance()" title="Clique para alterar seu saldo inicial de partida">
-          <i class="bi bi-wallet2 text-success"></i>
-          <span class="small text-muted">Saldo Inicial:</span>
-          <span class="mono-num fw-semibold text-white">R$ {{ currentUser.initialBalance | number:'1.2-2' }}</span>
-          <i class="bi bi-pencil-square ms-1 text-muted small"></i>
-        </button>
+        <!-- Account / Context Switcher (Multi-Contas) -->
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2 rounded-pill px-3 shadow-sm border-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="rounded-circle p-1 d-inline-flex align-items-center justify-content-center" [style.background-color]="selectedAccount ? selectedAccount.colorHex : '#10B981'" style="width: 20px; height: 20px; font-size: 0.65rem;">
+              <i class="bi text-white" [ngClass]="selectedAccount ? ('bi-' + selectedAccount.icon) : 'bi-globe'"></i>
+            </span>
+            <span class="fw-semibold text-white small">
+              {{ selectedAccount ? selectedAccount.name : 'Todas as Contas (Consolidado)' }}
+            </span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-dark shadow-lg">
+            <li class="dropdown-header small text-muted text-uppercase">Alternar Visão</li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center justify-content-between py-2 cursor-pointer" [class.active]="selectedAccountId === null" (click)="selectAccount(null)">
+                <div class="d-flex align-items-center gap-2">
+                  <i class="bi bi-globe text-success"></i>
+                  <span class="fw-semibold">Todas as Contas</span>
+                </div>
+                <span class="badge bg-secondary-subtle text-dark ms-2" style="font-size: 0.65rem;">Consolidado</span>
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li class="dropdown-header small text-muted text-uppercase">Minhas Contas</li>
+            <li *ngFor="let acc of accounts">
+              <a class="dropdown-item d-flex align-items-center justify-content-between py-2 cursor-pointer" [class.active]="selectedAccountId === acc.id" (click)="selectAccount(acc.id)">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="rounded-circle d-inline-block" [style.background-color]="acc.colorHex" style="width: 10px; height: 10px;"></span>
+                  <span>{{ acc.name }}</span>
+                </div>
+                <span class="badge" [ngClass]="acc.type === 1 ? 'bg-primary-subtle text-primary' : (acc.type === 2 ? 'bg-warning-subtle text-warning' : 'bg-info-subtle text-info')" style="font-size: 0.65rem;">
+                  {{ acc.typeName }}
+                </span>
+              </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <a class="dropdown-item d-flex align-items-center gap-2 text-success cursor-pointer" routerLink="/contas">
+                <i class="bi bi-gear"></i>
+                <span>Gerenciar / Nova Conta...</span>
+              </a>
+            </li>
+          </ul>
+        </div>
 
         <!-- Quick Add Transaction -->
         <button class="btn btn-success btn-sm d-flex align-items-center gap-2 rounded-pill px-3 shadow-sm fw-semibold" (click)="onNewTransaction()">
@@ -68,8 +109,8 @@
             <li class="dropdown-header">Conectado como <strong>{{ currentUser.email }}</strong></li>
             <li><hr class="dropdown-divider"></li>
             <li>
-              <a class="dropdown-item d-flex align-items-center gap-2" href="javascript:void(0)" (click)="onEditBalance()">
-                <i class="bi bi-gear"></i> Ajustar Saldo Inicial
+              <a class="dropdown-item d-flex align-items-center gap-2" routerLink="/contas">
+                <i class="bi bi-wallet2"></i> Minhas Contas
               </a>
             </li>
             <li>

@@ -23,65 +23,128 @@ public class TermometroEngineService : ITermometroEngineService
         _context = context;
     }
 
-    public async Task<decimal> GetCarryOverBalanceAsync(int userId, DateTime targetMonthStart)
+    public async Task<decimal> GetCarryOverBalanceAsync(int userId, DateTime targetMonthStart, int? accountId = null)
     {
-        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null) return 0;
+        decimal initialBalance = 0;
 
-        decimal initialBalance = user.InitialBalance;
+        if (accountId.HasValue)
+        {
+            var account = await _context.Accounts.AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == accountId.Value && a.UserId == userId);
+            if (account != null)
+            {
+                initialBalance = account.InitialBalance;
+            }
+        }
+        else
+        {
+            // Consolidated initial balance: sum of all active accounts' initial balances
+            var accountsSum = await _context.Accounts.AsNoTracking()
+                .Where(a => a.UserId == userId && a.IsActive)
+                .SumAsync(a => (decimal?)a.InitialBalance);
+
+            if (accountsSum.HasValue && accountsSum.Value > 0)
+            {
+                initialBalance = accountsSum.Value;
+            }
+            else
+            {
+                var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+                initialBalance = user?.InitialBalance ?? 0;
+            }
+        }
 
         // Sum all income transactions before targetMonthStart
-        var pastIncome = await _context.Transactions
-            .Where(t => t.UserId == userId && t.Date < targetMonthStart && t.Type == TransactionType.Entrada)
-            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+        var pastIncomeQuery = _context.Transactions
+            .Where(t => t.UserId == userId && t.Date < targetMonthStart && t.Type == TransactionType.Entrada);
+
+        if (accountId.HasValue)
+        {
+            pastIncomeQuery = pastIncomeQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var pastIncome = await pastIncomeQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
 
         // Only transactions that actually took money out of the bank account before targetMonthStart:
         // That is: cash/pix/debito expenses OR invoice payment transactions.
-        var pastExpenses = await _context.Transactions
+        var pastExpensesQuery = _context.Transactions
             .Where(t => t.UserId == userId && t.Date < targetMonthStart &&
                         (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
-                        (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
-            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+                        (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment));
+
+        if (accountId.HasValue)
+        {
+            pastExpensesQuery = pastExpensesQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var pastExpenses = await pastExpensesQuery.SumAsync(t => (decimal?)t.Amount) ?? 0;
 
         return initialBalance + pastIncome - pastExpenses;
     }
 
-    public async Task<MonthlyFlowResponseDto> GetMonthlyFlowAsync(int userId, int year, int month)
+    public async Task<MonthlyFlowResponseDto> GetMonthlyFlowAsync(int userId, int year, int month, int? accountId = null)
     {
         var monthStart = new DateTime(year, month, 1);
         var daysInMonth = DateTime.DaysInMonth(year, month);
         var monthEnd = new DateTime(year, month, daysInMonth, 23, 59, 59);
 
         // Carry-over balance from month start
-        decimal runningBalance = await GetCarryOverBalanceAsync(userId, monthStart);
+        decimal runningBalance = await GetCarryOverBalanceAsync(userId, monthStart, accountId);
         decimal monthInitialBalance = runningBalance;
 
         // Fetch transactions for this month
-        var transactions = await _context.Transactions
+        var transactionsQuery = _context.Transactions
             .Include(t => t.Category)
             .Include(t => t.CreditCard)
-            .Where(t => t.UserId == userId && t.Date >= monthStart && t.Date <= monthEnd)
+            .Include(t => t.Account)
+            .Where(t => t.UserId == userId && t.Date >= monthStart && t.Date <= monthEnd);
+
+        if (accountId.HasValue)
+        {
+            transactionsQuery = transactionsQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var transactions = await transactionsQuery
             .OrderBy(t => t.Date)
             .ThenBy(t => t.Id)
             .ToListAsync();
 
-        // Active credit cards
-        var activeCards = await _context.CreditCards
+        // Active credit cards (optionally filtered by account if specified)
+        var activeCardsQuery = _context.CreditCards
             .AsNoTracking()
-            .Where(c => c.UserId == userId && c.IsActive)
-            .ToListAsync();
+            .Where(c => c.UserId == userId && c.IsActive);
+
+        if (accountId.HasValue)
+        {
+            activeCardsQuery = activeCardsQuery.Where(c => c.AccountId == accountId.Value);
+        }
+
+        var activeCards = await activeCardsQuery.ToListAsync();
 
         // Invoices maturing in this month
-        var cardPurchasesForMonth = await _context.Transactions
+        var cardPurchasesQuery = _context.Transactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.CreditCardId != null && !t.IsInvoicePayment
-                        && t.InvoiceYear == year && t.InvoiceMonth == month)
-            .ToListAsync();
+                        && t.InvoiceYear == year && t.InvoiceMonth == month);
 
-        var paidCardInvoices = await _context.Transactions
+        if (accountId.HasValue)
+        {
+            cardPurchasesQuery = cardPurchasesQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var cardPurchasesForMonth = await cardPurchasesQuery.ToListAsync();
+
+        var paidCardInvoicesQuery = _context.Transactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.CreditCardId != null && t.IsInvoicePayment
-                        && t.InvoiceYear == year && t.InvoiceMonth == month)
+                        && t.InvoiceYear == year && t.InvoiceMonth == month);
+
+        if (accountId.HasValue)
+        {
+            paidCardInvoicesQuery = paidCardInvoicesQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var paidCardInvoices = await paidCardInvoicesQuery
             .Select(t => t.CreditCardId!.Value)
             .ToListAsync();
 
@@ -152,6 +215,9 @@ public class TermometroEngineService : ITermometroEngineService
                     Status = t.Status,
                     PaymentMethod = t.PaymentMethod,
                     Notes = t.Notes,
+                    AccountId = t.AccountId,
+                    AccountName = t.Account?.Name,
+                    AccountColor = t.Account?.ColorHex,
                     CreditCardId = t.CreditCardId,
                     CreditCardName = t.CreditCard?.Name,
                     InstallmentNumber = t.InstallmentNumber,
@@ -230,10 +296,10 @@ public class TermometroEngineService : ITermometroEngineService
         };
     }
 
-    public async Task<AnnualEconomyResponseDto> GetAnnualEconomyAsync(int userId, int year)
+    public async Task<AnnualEconomyResponseDto> GetAnnualEconomyAsync(int userId, int year, int? accountId = null)
     {
         var yearStart = new DateTime(year, 1, 1);
-        var initialBalanceOfYear = await GetCarryOverBalanceAsync(userId, yearStart);
+        var initialBalanceOfYear = await GetCarryOverBalanceAsync(userId, yearStart, accountId);
 
         var monthsSummary = new List<AnnualMonthSummaryDto>();
         decimal yearTotalIncome = 0;
@@ -241,7 +307,7 @@ public class TermometroEngineService : ITermometroEngineService
 
         for (int m = 1; m <= 12; m++)
         {
-            var monthlyFlow = await GetMonthlyFlowAsync(userId, year, m);
+            var monthlyFlow = await GetMonthlyFlowAsync(userId, year, m, accountId);
 
             yearTotalIncome += monthlyFlow.TotalIncome;
             yearTotalExpenses += monthlyFlow.TotalExpenses;
@@ -278,15 +344,23 @@ public class TermometroEngineService : ITermometroEngineService
         };
     }
 
-    public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(int userId, int year, int month)
+    public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(int userId, int year, int month, int? accountId = null)
     {
-        var monthlyFlow = await GetMonthlyFlowAsync(userId, year, month);
+        var monthlyFlow = await GetMonthlyFlowAsync(userId, year, month, accountId);
 
         // Recent 5 transactions
-        var recent = await _context.Transactions
+        var recentQuery = _context.Transactions
             .Include(t => t.Category)
             .Include(t => t.CreditCard)
-            .Where(t => t.UserId == userId)
+            .Include(t => t.Account)
+            .Where(t => t.UserId == userId);
+
+        if (accountId.HasValue)
+        {
+            recentQuery = recentQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var recent = await recentQuery
             .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.Id)
             .Take(5)
@@ -307,6 +381,9 @@ public class TermometroEngineService : ITermometroEngineService
                 Status = t.Status,
                 PaymentMethod = t.PaymentMethod,
                 Notes = t.Notes,
+                AccountId = t.AccountId,
+                AccountName = t.Account != null ? t.Account.Name : null,
+                AccountColor = t.Account != null ? t.Account.ColorHex : null,
                 CreditCardId = t.CreditCardId,
                 CreditCardName = t.CreditCard != null ? t.CreditCard.Name : null,
                 InstallmentNumber = t.InstallmentNumber,
@@ -334,10 +411,17 @@ public class TermometroEngineService : ITermometroEngineService
         var daysInMonth = DateTime.DaysInMonth(year, month);
         var monthEnd = new DateTime(year, month, daysInMonth, 23, 59, 59);
 
-        var expensesByCategory = await _context.Transactions
+        var expensesQuery = _context.Transactions
             .Include(t => t.Category)
             .Where(t => t.UserId == userId && t.Date >= monthStart && t.Date <= monthEnd &&
-                        (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario))
+                        (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario));
+
+        if (accountId.HasValue)
+        {
+            expensesQuery = expensesQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var expensesByCategory = await expensesQuery
             .GroupBy(t => new { Name = t.Category != null ? t.Category.Name : "Sem Categoria", Color = t.Category != null ? t.Category.ColorHex : "#6B7280" })
             .Select(g => new
             {
@@ -357,10 +441,17 @@ public class TermometroEngineService : ITermometroEngineService
         }).OrderByDescending(c => c.TotalAmount).ToList();
 
         // Total credit card invoices for this month
-        var cardInvoicesSum = await _context.Transactions
+        var cardInvoicesQuery = _context.Transactions
             .AsNoTracking()
             .Where(t => t.UserId == userId && t.CreditCardId != null && !t.IsInvoicePayment
-                        && t.InvoiceYear == year && t.InvoiceMonth == month)
+                        && t.InvoiceYear == year && t.InvoiceMonth == month);
+
+        if (accountId.HasValue)
+        {
+            cardInvoicesQuery = cardInvoicesQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var cardInvoicesSum = await cardInvoicesQuery
             .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
         // Current real-time balance
@@ -369,6 +460,105 @@ public class TermometroEngineService : ITermometroEngineService
         decimal currentBalance = (year == today.Year && month == today.Month && todayFlow != null)
             ? todayFlow.CumulativeBalance
             : monthlyFlow.FinalBalance;
+
+        // Realized vs Previsto metrics for the month
+        var allFlowTransactions = monthlyFlow.Days.SelectMany(d => d.Transactions).ToList();
+
+        var flowIncome = allFlowTransactions.Where(t => t.Type == TransactionType.Entrada).ToList();
+        decimal realizedIncome = flowIncome.Where(t => t.Status == TransactionStatus.Realizado).Sum(t => t.Amount);
+        decimal pendingIncome = flowIncome.Where(t => t.Status == TransactionStatus.Previsto).Sum(t => t.Amount);
+
+        var flowExpenses = allFlowTransactions.Where(t =>
+            (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
+            (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment || t.Id < 0)
+        ).ToList();
+        decimal realizedExpenses = flowExpenses.Where(t => t.Status == TransactionStatus.Realizado).Sum(t => t.Amount);
+        decimal pendingExpenses = flowExpenses.Where(t => t.Status == TransactionStatus.Previsto).Sum(t => t.Amount);
+
+        decimal realizedPerformance = realizedIncome - realizedExpenses;
+        decimal pendingPerformance = pendingIncome - pendingExpenses;
+
+        // Overdue summary: items scheduled before today that remain in 'Previsto' status
+        var todayDate = DateTime.Today;
+
+        var overdueQuery = _context.Transactions
+            .Include(t => t.Category)
+            .Include(t => t.CreditCard)
+            .Include(t => t.Account)
+            .Where(t => t.UserId == userId && t.Status == TransactionStatus.Previsto && t.Date < todayDate &&
+                        (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment));
+
+        if (accountId.HasValue)
+        {
+            overdueQuery = overdueQuery.Where(t => t.AccountId == accountId.Value);
+        }
+
+        var overdueList = await overdueQuery
+            .OrderBy(t => t.Date)
+            .ThenBy(t => t.Id)
+            .Select(t => new TransactionResponseDto
+            {
+                Id = t.Id,
+                Date = t.Date,
+                Day = t.Day,
+                Month = t.Month,
+                Year = t.Year,
+                Type = t.Type,
+                Amount = t.Amount,
+                Description = t.Description,
+                CategoryId = t.CategoryId,
+                CategoryName = t.Category != null ? t.Category.Name : "Sem categoria",
+                CategoryColor = t.Category != null ? t.Category.ColorHex : "#6B7280",
+                CategoryIcon = t.Category != null ? t.Category.Icon : "tag",
+                Status = t.Status,
+                PaymentMethod = t.PaymentMethod,
+                Notes = t.Notes,
+                AccountId = t.AccountId,
+                AccountName = t.Account != null ? t.Account.Name : null,
+                AccountColor = t.Account != null ? t.Account.ColorHex : null,
+                CreditCardId = t.CreditCardId,
+                CreditCardName = t.CreditCard != null ? t.CreditCard.Name : null,
+                InstallmentNumber = t.InstallmentNumber,
+                TotalInstallments = t.TotalInstallments,
+                InvoiceMonth = t.InvoiceMonth,
+                InvoiceYear = t.InvoiceYear,
+                IsInvoicePayment = t.IsInvoicePayment,
+                RecurrenceGroupId = t.RecurrenceGroupId,
+                CreatedAt = t.CreatedAt
+            })
+            .ToListAsync();
+
+        // Include projected card invoices if their due date is in the past
+        if (year < todayDate.Year || (year == todayDate.Year && month < todayDate.Month))
+        {
+            var pastInvoices = allFlowTransactions
+                .Where(t => t.Id < 0 && t.Status == TransactionStatus.Previsto);
+            overdueList.AddRange(pastInvoices);
+        }
+        else if (year == todayDate.Year && month == todayDate.Month)
+        {
+            var overdueInvoicesThisMonth = monthlyFlow.Days
+                .Where(d => d.Day < todayDate.Day)
+                .SelectMany(d => d.Transactions)
+                .Where(t => t.Id < 0 && t.Status == TransactionStatus.Previsto);
+            overdueList.AddRange(overdueInvoicesThisMonth);
+        }
+
+        decimal overdueExpenses = overdueList
+            .Where(t => t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario)
+            .Sum(t => t.Amount);
+
+        decimal overdueIncome = overdueList
+            .Where(t => t.Type == TransactionType.Entrada)
+            .Sum(t => t.Amount);
+
+        var overdueSummary = new OverdueSummaryDto
+        {
+            TotalCount = overdueList.Count,
+            TotalExpenses = overdueExpenses,
+            TotalIncome = overdueIncome,
+            Transactions = overdueList
+        };
 
         return new DashboardSummaryDto
         {
@@ -384,6 +574,13 @@ public class TermometroEngineService : ITermometroEngineService
             MonthCreditCardTotal = cardInvoicesSum,
             MonthPerformance = monthlyFlow.Performance,
             MonthSavingsRate = monthlyFlow.SavingsRate,
+            RealizedIncome = realizedIncome,
+            PendingIncome = pendingIncome,
+            RealizedExpenses = realizedExpenses,
+            PendingExpenses = pendingExpenses,
+            RealizedPerformance = realizedPerformance,
+            PendingPerformance = pendingPerformance,
+            OverdueSummary = overdueSummary,
             RecentTransactions = recent,
             DailyTrend = trend,
             CategoryDistribution = categoryShares

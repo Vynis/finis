@@ -18,7 +18,8 @@ public class DashboardController : BaseApiController
     [HttpGet]
     public async Task<ActionResult<DashboardSummaryDto>> GetDashboardSummary(
         [FromQuery] int? year,
-        [FromQuery] int? month)
+        [FromQuery] int? month,
+        [FromQuery] int? accountId)
     {
         var targetYear = year ?? DateTime.UtcNow.Year;
         var targetMonth = month ?? DateTime.UtcNow.Month;
@@ -29,7 +30,7 @@ public class DashboardController : BaseApiController
         }
 
         var userId = GetUserId();
-        var summary = await _engineService.GetDashboardSummaryAsync(userId, targetYear, targetMonth);
+        var summary = await _engineService.GetDashboardSummaryAsync(userId, targetYear, targetMonth, accountId);
 
         return Ok(summary);
     }

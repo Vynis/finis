@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, Subject, tap } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
+  Account,
+  AccountCreateUpdate,
   AnnualEconomyResponse,
   Category,
   CreditCard,
@@ -25,38 +27,103 @@ export class FinisApiService {
   private refreshSubject = new Subject<void>();
   public refresh$ = this.refreshSubject.asObservable();
 
+  // Selected Account state (null = Consolidado / Todas as contas)
+  private selectedAccountSubject = new BehaviorSubject<number | null>(this.getStoredAccountId());
+  public selectedAccountId$ = this.selectedAccountSubject.asObservable();
+
   constructor(private http: HttpClient) {}
+
+  private getStoredAccountId(): number | null {
+    const stored = localStorage.getItem('finis_selected_account_id');
+    return stored ? Number(stored) : null;
+  }
+
+  getSelectedAccountId(): number | null {
+    return this.selectedAccountSubject.value;
+  }
+
+  setSelectedAccountId(id: number | null): void {
+    if (id !== null) {
+      localStorage.setItem('finis_selected_account_id', id.toString());
+    } else {
+      localStorage.removeItem('finis_selected_account_id');
+    }
+    this.selectedAccountSubject.next(id);
+    this.notifyDataChanged();
+  }
 
   notifyDataChanged(): void {
     this.refreshSubject.next();
   }
 
   // Dashboard
-  getDashboardSummary(year?: number, month?: number): Observable<DashboardSummary> {
+  getDashboardSummary(year?: number, month?: number, accountId?: number | null): Observable<DashboardSummary> {
     let params = new HttpParams();
     if (year) params = params.set('year', year.toString());
     if (month) params = params.set('month', month.toString());
+    const accId = accountId !== undefined ? accountId : this.getSelectedAccountId();
+    if (accId !== null) params = params.set('accountId', accId.toString());
     return this.http.get<DashboardSummary>(`${this.apiUrl}/dashboard`, { params });
   }
 
   // Monthly Flow (Termômetro Diário)
-  getMonthlyFlow(year: number, month: number): Observable<MonthlyFlowResponse> {
-    return this.http.get<MonthlyFlowResponse>(`${this.apiUrl}/monthlyflow/${year}/${month}`);
+  getMonthlyFlow(year: number, month: number, accountId?: number | null): Observable<MonthlyFlowResponse> {
+    let params = new HttpParams();
+    const accId = accountId !== undefined ? accountId : this.getSelectedAccountId();
+    if (accId !== null) params = params.set('accountId', accId.toString());
+    return this.http.get<MonthlyFlowResponse>(`${this.apiUrl}/monthlyflow/${year}/${month}`, { params });
   }
 
   // Annual Economy
-  getAnnualEconomy(year: number): Observable<AnnualEconomyResponse> {
-    return this.http.get<AnnualEconomyResponse>(`${this.apiUrl}/economy/${year}`);
+  getAnnualEconomy(year: number, accountId?: number | null): Observable<AnnualEconomyResponse> {
+    let params = new HttpParams();
+    const accId = accountId !== undefined ? accountId : this.getSelectedAccountId();
+    if (accId !== null) params = params.set('accountId', accId.toString());
+    return this.http.get<AnnualEconomyResponse>(`${this.apiUrl}/economy/${year}`, { params });
+  }
+
+  // Accounts
+  getAccounts(): Observable<Account[]> {
+    return this.http.get<Account[]>(`${this.apiUrl}/accounts`);
+  }
+
+  getAccountById(id: number): Observable<Account> {
+    return this.http.get<Account>(`${this.apiUrl}/accounts/${id}`);
+  }
+
+  createAccount(account: AccountCreateUpdate): Observable<Account> {
+    return this.http.post<Account>(`${this.apiUrl}/accounts`, account).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  updateAccount(id: number, account: AccountCreateUpdate): Observable<Account> {
+    return this.http.put<Account>(`${this.apiUrl}/accounts/${id}`, account).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  deleteAccount(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/accounts/${id}`).pipe(
+      tap(() => {
+        if (this.getSelectedAccountId() === id) {
+          this.setSelectedAccountId(null);
+        }
+        this.notifyDataChanged();
+      })
+    );
   }
 
   // Transactions
-  getTransactions(filter?: { year?: number; month?: number; type?: number; categoryId?: number; creditCardId?: number }): Observable<Transaction[]> {
+  getTransactions(filter?: { year?: number; month?: number; type?: number; categoryId?: number; creditCardId?: number; accountId?: number | null }): Observable<Transaction[]> {
     let params = new HttpParams();
     if (filter?.year) params = params.set('year', filter.year.toString());
     if (filter?.month) params = params.set('month', filter.month.toString());
     if (filter?.type) params = params.set('type', filter.type.toString());
     if (filter?.categoryId) params = params.set('categoryId', filter.categoryId.toString());
     if (filter?.creditCardId) params = params.set('creditCardId', filter.creditCardId.toString());
+    const accId = filter?.accountId !== undefined ? filter.accountId : this.getSelectedAccountId();
+    if (accId !== null && accId !== undefined) params = params.set('accountId', accId.toString());
     return this.http.get<Transaction[]>(`${this.apiUrl}/transactions`, { params });
   }
 
@@ -68,6 +135,12 @@ export class FinisApiService {
 
   updateTransaction(id: number, dto: TransactionCreateUpdate): Observable<Transaction> {
     return this.http.put<Transaction>(`${this.apiUrl}/transactions/${id}`, dto).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  toggleTransactionStatus(id: number): Observable<Transaction> {
+    return this.http.patch<Transaction>(`${this.apiUrl}/transactions/${id}/toggle-status`, {}).pipe(
       tap(() => this.notifyDataChanged())
     );
   }
