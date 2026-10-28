@@ -1,1 +1,22 @@
-/* Transaction modal styles */
+/* Transaction modal responsive layout */
+.modal {
+  overflow-y: auto !important;
+}
+
+.modal-dialog-scrollable {
+  max-height: calc(100vh - 2rem) !important;
+}
+
+.modal-dialog-scrollable .modal-content {
+  max-height: calc(100vh - 2rem) !important;
+  overflow: hidden !important;
+}
+
+.modal-dialog-scrollable .modal-body {
+  overflow-y: auto !important;
+}
+
+/* Form compact spacing */
+.form-label {
+  margin-bottom: 0.25rem;
+}

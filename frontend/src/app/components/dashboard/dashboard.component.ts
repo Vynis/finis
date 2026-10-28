@@ -1,7 +1,7 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
-import { DashboardSummary, Transaction } from '../../models/models';
+import { AdvisorAnalysis, DashboardSummary, Transaction } from '../../models/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -10,6 +10,7 @@ import { DashboardSummary, Transaction } from '../../models/models';
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   summary: DashboardSummary | null = null;
+  advisor: AdvisorAnalysis | null = null;
   loading = false;
   selectedYear: number = new Date().getFullYear();
   selectedMonth: number = new Date().getMonth() + 1;
@@ -58,6 +59,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
+      }
+    });
+
+    this.api.getAdvisorAnalysis(this.selectedYear, this.selectedMonth).subscribe({
+      next: adv => {
+        this.advisor = adv;
       }
     });
   }

@@ -108,7 +108,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   openEditModal(category: Category): void {
-    if (category.isDefault) return;
     this.modalTitle = 'Editar Categoria';
     this.editingCategoryId = category.id;
     this.formName = category.name;
@@ -168,11 +167,6 @@ export class CategoriesComponent implements OnInit, OnDestroy {
   }
 
   onDeleteCategory(cat: Category): void {
-    if (cat.isDefault) {
-      alert('Categorias padrão do sistema não podem ser excluídas.');
-      return;
-    }
-
     if (confirm(`Tem certeza de que deseja excluir a categoria "${cat.name}"? Os lançamentos associados a ela passarão a ser exibidos como "Sem categoria".`)) {
       this.api.deleteCategory(cat.id).subscribe({
         next: () => {

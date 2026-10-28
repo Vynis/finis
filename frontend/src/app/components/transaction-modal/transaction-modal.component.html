@@ -1,13 +1,14 @@
-<div class="modal fade show d-block" tabindex="-1" *ngIf="isOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
-      <!-- Modal Header -->
-      <div class="modal-header border-bottom py-3 px-4" [ngClass]="{
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); overflow-y: auto;">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 560px; max-height: calc(100vh - 2rem);">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden d-flex flex-column" style="max-height: calc(100vh - 2rem);">
+      
+      <!-- Modal Header (Fixo no Topo) -->
+      <div class="modal-header border-bottom py-2.5 px-4 flex-shrink-0" [ngClass]="{
         'bg-success-subtle': type === 1,
         'bg-danger-subtle': type === 2,
         'bg-warning-subtle': type === 3
       }">
-        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2 mb-0">
           <i class="bi" [ngClass]="{
             'bi-arrow-down-left text-success': type === 1,
             'bi-calendar-check text-danger': type === 2,
@@ -18,35 +19,35 @@
         <button type="button" class="btn-close" (click)="closeModal()" aria-label="Close"></button>
       </div>
 
-      <!-- Modal Body -->
-      <div class="modal-body p-4">
+      <!-- Modal Body (Rolagem interna suave se a tela for baixa) -->
+      <div class="modal-body p-3 p-md-4 overflow-y-auto">
         <!-- Error Alert -->
-        <div *ngIf="errorMessage" class="alert alert-danger py-2 small d-flex align-items-center gap-2">
+        <div *ngIf="errorMessage" class="alert alert-danger py-2 px-3 small d-flex align-items-center gap-2 mb-3">
           <i class="bi bi-exclamation-circle-fill"></i>
           <span>{{ errorMessage }}</span>
         </div>
 
         <!-- Transaction Type Switcher Buttons -->
-        <div class="mb-4">
-          <label class="form-label small fw-semibold text-secondary">Tipo de Movimentação</label>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary mb-1">Tipo de Movimentação</label>
           <div class="btn-group w-100 shadow-sm" role="group">
-            <button type="button" class="btn fw-semibold" [ngClass]="type === 1 ? 'btn-success' : 'btn-outline-secondary'" (click)="onTypeChange(1)">
+            <button type="button" class="btn btn-sm fw-semibold py-2" [ngClass]="type === 1 ? 'btn-success' : 'btn-outline-secondary'" (click)="onTypeChange(1)">
               <i class="bi bi-plus-lg me-1"></i> Entrada
             </button>
-            <button type="button" class="btn fw-semibold" [ngClass]="type === 2 ? 'btn-danger' : 'btn-outline-secondary'" (click)="onTypeChange(2)">
+            <button type="button" class="btn btn-sm fw-semibold py-2" [ngClass]="type === 2 ? 'btn-danger' : 'btn-outline-secondary'" (click)="onTypeChange(2)">
               <i class="bi bi-calendar-event me-1"></i> Saída Fixa
             </button>
-            <button type="button" class="btn fw-semibold" [ngClass]="type === 3 ? 'btn-warning text-dark' : 'btn-outline-secondary'" (click)="onTypeChange(3)">
+            <button type="button" class="btn btn-sm fw-semibold py-2" [ngClass]="type === 3 ? 'btn-warning text-dark' : 'btn-outline-secondary'" (click)="onTypeChange(3)">
               <i class="bi bi-cart me-1"></i> Diário
             </button>
           </div>
         </div>
 
-        <form (ngSubmit)="onSubmit()">
+        <form id="transactionForm" (ngSubmit)="onSubmit()">
           <!-- Valor & Data -->
-          <div class="row g-3 mb-3">
+          <div class="row g-2 mb-2.5">
             <div class="col-6">
-              <label class="form-label small fw-semibold text-secondary">Valor (R$)*</label>
+              <label class="form-label small fw-semibold text-secondary mb-1">Valor (R$)*</label>
               <div class="input-group">
                 <span class="input-group-text bg-white fw-bold text-secondary">R$</span>
                 <input type="number" step="0.01" class="form-control mono-num fw-bold fs-5 text-dark" [(ngModel)]="amount" name="amount" placeholder="0,00" required autofocus>
@@ -54,56 +55,51 @@
             </div>
 
             <div class="col-6">
-              <label class="form-label small fw-semibold text-secondary">Data do Lançamento*</label>
+              <label class="form-label small fw-semibold text-secondary mb-1">Data do Lançamento*</label>
               <input type="date" class="form-control" [(ngModel)]="date" name="date" required>
             </div>
           </div>
 
           <!-- Descrição -->
-          <div class="mb-3">
-            <label class="form-label small fw-semibold text-secondary">Descrição*</label>
+          <div class="mb-2.5">
+            <label class="form-label small fw-semibold text-secondary mb-1">Descrição*</label>
             <input type="text" class="form-control" [(ngModel)]="description" name="description" placeholder="Ex: Supermercado Assaí, Salário, Internet" required>
           </div>
 
-          <!-- Conta / Carteira (Pessoal vs Empresa) -->
-          <div class="mb-3" *ngIf="accounts.length > 0">
-            <label class="form-label small fw-semibold text-secondary d-flex justify-content-between align-items-center">
-              <span>Conta / Carteira</span>
-              <a routerLink="/contas" (click)="closeModal()" class="text-success text-decoration-none" style="font-size: 0.72rem;">
-                <i class="bi bi-gear me-1"></i> Gerenciar Contas
-              </a>
-            </label>
-            <select class="form-select" [(ngModel)]="accountId" name="accountId">
-              <option *ngFor="let acc of accounts" [ngValue]="acc.id">
-                {{ acc.name }} ({{ acc.typeName }})
-              </option>
-            </select>
-          </div>
-
-          <!-- Categoria & Forma de Pagamento -->
-          <div class="row g-3 mb-3">
-            <div class="col-6">
-              <label class="form-label small fw-semibold text-secondary d-flex justify-content-between align-items-center">
-                <span>Categoria</span>
-                <a routerLink="/categorias" (click)="closeModal()" class="text-success text-decoration-none" style="font-size: 0.72rem;">
-                  <i class="bi bi-gear me-1"></i> Gerenciar
+          <!-- Conta / Carteira & Categoria em Linha Dupla -->
+          <div class="row g-2 mb-2.5">
+            <div class="col-6" *ngIf="accounts.length > 0">
+              <label class="form-label small fw-semibold text-secondary mb-1 d-flex justify-content-between align-items-center">
+                <span>Conta / Carteira</span>
+                <a routerLink="/contas" (click)="closeModal()" class="text-success text-decoration-none" style="font-size: 0.70rem;">
+                  <i class="bi bi-gear"></i>
                 </a>
               </label>
-              <select class="form-select" [(ngModel)]="categoryId" (ngModelChange)="onCategoryChange()" name="categoryId">
-                <option [ngValue]="null">-- Sem Categoria --</option>
-                <optgroup [label]="'Categorias de ' + getTypeName(type)">
-                  <option *ngFor="let c of filteredCategories" [ngValue]="c.id">{{ c.name }}</option>
-                </optgroup>
-                <optgroup *ngIf="otherCategories.length > 0" label="Outras Categorias (ajusta o tipo)">
-                  <option *ngFor="let c of otherCategories" [ngValue]="c.id">
-                    {{ c.name }} ({{ getTypeName(c.type) }})
-                  </option>
-                </optgroup>
+              <select class="form-select" [(ngModel)]="accountId" name="accountId">
+                <option *ngFor="let acc of accounts" [ngValue]="acc.id">
+                  {{ acc.name }} ({{ acc.typeName }})
+                </option>
               </select>
             </div>
 
+            <div [ngClass]="accounts.length > 0 ? 'col-6' : 'col-12'">
+              <label class="form-label small fw-semibold text-secondary mb-1 d-flex justify-content-between align-items-center">
+                <span>Categoria</span>
+                <a routerLink="/categorias" (click)="closeModal()" class="text-success text-decoration-none" style="font-size: 0.70rem;">
+                  <i class="bi bi-gear"></i>
+                </a>
+              </label>
+              <select class="form-select" [(ngModel)]="categoryId" name="categoryId">
+                <option [ngValue]="null">-- Sem Categoria --</option>
+                <option *ngFor="let c of filteredCategories" [ngValue]="c.id">{{ c.name }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Forma de Pagamento & Status -->
+          <div class="row g-2 mb-2.5">
             <div class="col-6">
-              <label class="form-label small fw-semibold text-secondary">Forma de Pagamento</label>
+              <label class="form-label small fw-semibold text-secondary mb-1">Forma de Pagamento</label>
               <select class="form-select" [(ngModel)]="paymentMethod" name="paymentMethod">
                 <option [ngValue]="1">Pix</option>
                 <option [ngValue]="2">Cartão de Crédito</option>
@@ -114,10 +110,28 @@
                 <option [ngValue]="7">Outro</option>
               </select>
             </div>
+
+            <div class="col-6">
+              <label class="form-label small fw-semibold text-secondary mb-1">Status</label>
+              <div class="d-flex align-items-center gap-2 pt-1">
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input cursor-pointer" type="radio" name="status" [value]="1" [(ngModel)]="status" id="statusRealizado">
+                  <label class="form-check-label small cursor-pointer" for="statusRealizado">
+                    <span class="badge bg-success-subtle text-success">Compensado</span>
+                  </label>
+                </div>
+                <div class="form-check form-check-inline mb-0">
+                  <input class="form-check-input cursor-pointer" type="radio" name="status" [value]="2" [(ngModel)]="status" id="statusPrevisto">
+                  <label class="form-check-label small cursor-pointer" for="statusPrevisto">
+                    <span class="badge bg-secondary-subtle text-secondary">Previsto</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Opções Especiais de Cartão de Crédito -->
-          <div *ngIf="paymentMethod === 2" class="p-3 mb-3 bg-light rounded-3 border border-primary-subtle">
+          <div *ngIf="paymentMethod === 2" class="p-3 mb-2.5 bg-light rounded-3 border border-primary-subtle">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="small fw-bold text-primary">
                 <i class="bi bi-credit-card-2-front me-1"></i> Detalhes do Cartão
@@ -170,7 +184,7 @@
           </div>
 
           <!-- Opção de Repetição / Lançamento Fixo Recorrente -->
-          <div *ngIf="paymentMethod !== 2 && !transactionToEdit" class="p-3 mb-3 bg-light rounded-3 border border-secondary-subtle">
+          <div *ngIf="paymentMethod !== 2 && !transactionToEdit" class="p-2.5 mb-2.5 bg-light rounded-3 border border-secondary-subtle">
             <div class="form-check form-switch mb-0 d-flex align-items-center justify-content-between p-0">
               <label class="form-check-label small fw-bold text-dark d-flex align-items-center gap-2 cursor-pointer" for="recurringSwitch">
                 <i class="bi bi-arrow-repeat text-primary fs-6"></i>
@@ -179,7 +193,7 @@
               <input class="form-check-input ms-0 cursor-pointer" type="checkbox" id="recurringSwitch" [(ngModel)]="isRecurring" name="isRecurring">
             </div>
 
-            <div *ngIf="isRecurring" class="mt-3 pt-2 border-top">
+            <div *ngIf="isRecurring" class="mt-2 pt-2 border-top">
               <div class="row g-2 align-items-center">
                 <div class="col-sm-7">
                   <label class="form-label small text-muted mb-1">Repetir por quanto tempo?</label>
@@ -193,51 +207,33 @@
                   </select>
                 </div>
                 <div class="col-sm-5 pt-sm-3">
-                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-2 px-2 w-100 text-wrap text-start">
-                    <i class="bi bi-info-circle me-1"></i> Os meses futuros serão criados como <strong>Previsto</strong> no fluxo.
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1.5 px-2 w-100 text-wrap text-start" style="font-size: 0.68rem;">
+                    <i class="bi bi-info-circle me-1"></i> Meses futuros criados como <strong>Previsto</strong>.
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Status da Transação -->
-          <div class="mb-3">
-            <label class="form-label small fw-semibold text-secondary">Status</label>
-            <div class="d-flex gap-4">
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="status" [value]="1" [(ngModel)]="status" id="statusRealizado">
-                <label class="form-check-label small" for="statusRealizado">
-                  <span class="badge bg-success-subtle text-success me-1">Realizado</span> (Já compensou)
-                </label>
-              </div>
-              <div class="form-check">
-                <input class="form-check-input" type="radio" name="status" [value]="2" [(ngModel)]="status" id="statusPrevisto">
-                <label class="form-check-label small" for="statusPrevisto">
-                  <span class="badge bg-secondary-subtle text-secondary me-1">Previsto</span> (Programado)
-                </label>
-              </div>
-            </div>
-          </div>
-
           <!-- Observações -->
-          <div class="mb-4">
-            <label class="form-label small fw-semibold text-secondary">Observações (Opcional)</label>
-            <textarea class="form-control" rows="2" [(ngModel)]="notes" name="notes" placeholder="Detalhes adicionais..."></textarea>
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="d-flex justify-content-end gap-2 pt-2 border-top">
-            <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="loading">
-              Cancelar
-            </button>
-            <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="loading">
-              <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
-              <span>{{ transactionToEdit ? 'Salvar Alterações' : 'Salvar no Termômetro' }}</span>
-            </button>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold text-secondary mb-1">Observações (Opcional)</label>
+            <input type="text" class="form-control form-control-sm" [(ngModel)]="notes" name="notes" placeholder="Detalhes adicionais...">
           </div>
         </form>
       </div>
+
+      <!-- Modal Footer (Fixo no Rodapé, NUNCA É CORTADO) -->
+      <div class="modal-footer border-top py-2.5 px-4 bg-light d-flex justify-content-end gap-2 flex-shrink-0">
+        <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeModal()" [disabled]="loading">
+          Cancelar
+        </button>
+        <button type="submit" form="transactionForm" (click)="onSubmit()" class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" [disabled]="loading">
+          <span *ngIf="loading" class="spinner-border spinner-border-sm me-2"></span>
+          <span>{{ transactionToEdit ? 'Salvar Alterações' : 'Salvar no Termômetro' }}</span>
+        </button>
+      </div>
+
     </div>
   </div>
 </div>

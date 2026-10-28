@@ -5,12 +5,17 @@ import { environment } from '../../environments/environment';
 import {
   Account,
   AccountCreateUpdate,
+  AdvisorAnalysis,
   AnnualEconomyResponse,
   Category,
   CreditCard,
   CreditCardCreateUpdate,
   CreditCardInvoiceSummary,
   DashboardSummary,
+  Debt,
+  DebtCreateUpdate,
+  Goal,
+  GoalCreateUpdate,
   MonthlyFlowResponse,
   PayInvoiceRequest,
   Transaction,
@@ -216,5 +221,79 @@ export class FinisApiService {
     return this.http.post<Transaction>(`${this.apiUrl}/creditcards/${cardId}/invoices/${year}/${month}/pay`, req).pipe(
       tap(() => this.notifyDataChanged())
     );
+  }
+
+  // --- Goals ---
+  getGoals(accountId?: number): Observable<Goal[]> {
+    let params = new HttpParams();
+    const accId = accountId ?? this.getSelectedAccountId();
+    if (accId) params = params.set('accountId', accId.toString());
+    return this.http.get<Goal[]>(`${this.apiUrl}/goals`, { params });
+  }
+
+  createGoal(dto: GoalCreateUpdate): Observable<Goal> {
+    return this.http.post<Goal>(`${this.apiUrl}/goals`, dto).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  updateGoal(id: number, dto: GoalCreateUpdate): Observable<Goal> {
+    return this.http.put<Goal>(`${this.apiUrl}/goals/${id}`, dto).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  depositGoal(id: number, amount: number, isWithdrawal = false): Observable<Goal> {
+    return this.http.post<Goal>(`${this.apiUrl}/goals/${id}/deposit`, { amount, isWithdrawal }).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  deleteGoal(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/goals/${id}`).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  // --- Debts ---
+  getDebts(accountId?: number): Observable<Debt[]> {
+    let params = new HttpParams();
+    const accId = accountId ?? this.getSelectedAccountId();
+    if (accId) params = params.set('accountId', accId.toString());
+    return this.http.get<Debt[]>(`${this.apiUrl}/debts`, { params });
+  }
+
+  createDebt(dto: DebtCreateUpdate): Observable<Debt> {
+    return this.http.post<Debt>(`${this.apiUrl}/debts`, dto).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  updateDebt(id: number, dto: DebtCreateUpdate): Observable<Debt> {
+    return this.http.put<Debt>(`${this.apiUrl}/debts/${id}`, dto).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  amortizeDebt(id: number, amount: number): Observable<Debt> {
+    return this.http.post<Debt>(`${this.apiUrl}/debts/${id}/amortize`, { amount }).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  deleteDebt(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/debts/${id}`).pipe(
+      tap(() => this.notifyDataChanged())
+    );
+  }
+
+  // --- Finis Advisor ---
+  getAdvisorAnalysis(year?: number, month?: number, accountId?: number): Observable<AdvisorAnalysis> {
+    let params = new HttpParams();
+    if (year) params = params.set('year', year.toString());
+    if (month) params = params.set('month', month.toString());
+    const accId = accountId ?? this.getSelectedAccountId();
+    if (accId) params = params.set('accountId', accId.toString());
+    return this.http.get<AdvisorAnalysis>(`${this.apiUrl}/advisor/analysis`, { params });
   }
 }

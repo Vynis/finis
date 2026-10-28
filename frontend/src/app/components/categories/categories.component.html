@@ -66,8 +66,11 @@
             </div>
           </div>
 
-          <!-- Actions / Default Badge -->
-          <div *ngIf="!cat.isDefault" class="d-flex align-items-center gap-1">
+          <!-- Actions -->
+          <div class="d-flex align-items-center gap-1">
+            <span *ngIf="cat.isDefault" class="badge bg-light text-muted border py-1 px-1 me-1" style="font-size: 0.65rem;" title="Categoria padrão do sistema">
+              Padrão
+            </span>
             <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="openEditModal(cat)" title="Editar Categoria">
               <i class="bi bi-pencil text-secondary"></i>
             </button>
@@ -75,10 +78,6 @@
               <i class="bi bi-trash"></i>
             </button>
           </div>
-
-          <span *ngIf="cat.isDefault" class="badge bg-light text-muted border small" style="font-size: 0.65rem;">
-            Padrão
-          </span>
         </div>
       </div>
     </div>

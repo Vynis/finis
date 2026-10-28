@@ -14,6 +14,8 @@ public class FinisDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<CreditCard> CreditCards => Set<CreditCard>();
+    public DbSet<Goal> Goals => Set<Goal>();
+    public DbSet<Debt> Debts => Set<Debt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -110,6 +112,52 @@ public class FinisDbContext : DbContext
             entity.HasOne(t => t.CreditCard)
                   .WithMany(card => card.Transactions)
                   .HasForeignKey(t => t.CreditCardId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Goal
+        modelBuilder.Entity<Goal>(entity =>
+        {
+            entity.HasKey(g => g.Id);
+            entity.Property(g => g.Name).HasMaxLength(100).IsRequired();
+            entity.Property(g => g.TargetAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(g => g.CurrentAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(g => g.Category).HasMaxLength(50);
+            entity.Property(g => g.ColorHex).HasMaxLength(20);
+            entity.Property(g => g.Icon).HasMaxLength(50);
+
+            entity.HasOne(g => g.User)
+                  .WithMany(u => u.Goals)
+                  .HasForeignKey(g => g.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(g => g.Account)
+                  .WithMany()
+                  .HasForeignKey(g => g.AccountId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Debt
+        modelBuilder.Entity<Debt>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+            entity.Property(d => d.Name).HasMaxLength(100).IsRequired();
+            entity.Property(d => d.Creditor).HasMaxLength(100);
+            entity.Property(d => d.TotalAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(d => d.RemainingAmount).HasPrecision(18, 2).IsRequired();
+            entity.Property(d => d.InterestRateMonthly).HasPrecision(5, 2).IsRequired();
+            entity.Property(d => d.MonthlyPayment).HasPrecision(18, 2).IsRequired();
+            entity.Property(d => d.ColorHex).HasMaxLength(20);
+            entity.Property(d => d.Notes).HasMaxLength(500);
+
+            entity.HasOne(d => d.User)
+                  .WithMany(u => u.Debts)
+                  .HasForeignKey(d => d.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Account)
+                  .WithMany()
+                  .HasForeignKey(d => d.AccountId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
     }

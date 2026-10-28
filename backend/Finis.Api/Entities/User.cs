@@ -13,4 +13,6 @@ public class User
     public ICollection<Category> Categories { get; set; } = new List<Category>();
     public ICollection<CreditCard> CreditCards { get; set; } = new List<CreditCard>();
     public ICollection<Account> Accounts { get; set; } = new List<Account>();
+    public ICollection<Goal> Goals { get; set; } = new List<Goal>();
+    public ICollection<Debt> Debts { get; set; } = new List<Debt>();
 }

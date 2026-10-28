@@ -269,3 +269,116 @@ export interface DashboardSummary {
   dailyTrend: DailyTrendPoint[];
   categoryDistribution: CategoryExpenseShare[];
 }
+
+export interface Goal {
+  id: number;
+  name: string;
+  accountId?: number;
+  accountName?: string;
+  targetAmount: number;
+  currentAmount: number;
+  remainingAmount: number;
+  percentageCompleted: number;
+  targetDate?: string;
+  category: string;
+  colorHex: string;
+  icon: string;
+  priority: number;
+  priorityLabel: string;
+  isCompleted: boolean;
+  monthlyRequiredSavings: number;
+  monthsRemaining?: number;
+  createdAt: string;
+}
+
+export interface GoalCreateUpdate {
+  name: string;
+  accountId?: number;
+  targetAmount: number;
+  currentAmount?: number;
+  targetDate?: string;
+  category?: string;
+  colorHex?: string;
+  icon?: string;
+  priority?: number;
+  isCompleted?: boolean;
+}
+
+export interface Debt {
+  id: number;
+  name: string;
+  creditor?: string;
+  accountId?: number;
+  accountName?: string;
+  totalAmount: number;
+  remainingAmount: number;
+  paidAmount: number;
+  percentagePaid: number;
+  interestRateMonthly: number;
+  monthlyPayment: number;
+  dueDay: number;
+  colorHex: string;
+  notes?: string;
+  isSettled: boolean;
+  isHighInterest: boolean;
+  estimatedMonthsToPayoff?: number;
+  monthlyInterestCostEstimate: number;
+  createdAt: string;
+}
+
+export interface DebtCreateUpdate {
+  name: string;
+  creditor?: string;
+  accountId?: number;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRateMonthly: number;
+  monthlyPayment: number;
+  dueDay: number;
+  colorHex?: string;
+  notes?: string;
+  isSettled?: boolean;
+}
+
+export interface DebtRecommendation {
+  debtId: number;
+  debtName: string;
+  creditor?: string;
+  remainingAmount: number;
+  interestRateMonthly: number;
+  suggestedAmortization: number;
+  estimatedInterestSavedMonthly: number;
+  urgencyLabel: string;
+  strategyReason: string;
+}
+
+export interface GoalRecommendation {
+  goalId: number;
+  goalName: string;
+  targetAmount: number;
+  currentAmount: number;
+  suggestedDeposit: number;
+  monthsAhead?: number;
+  strategyReason: string;
+}
+
+export interface AdvisorAnalysis {
+  year: number;
+  month: number;
+  monthName: string;
+  projectedSurplus: number;
+  currentRealizedSurplus: number;
+  dailySafeSpendingTarget: number;
+  daysRemainingInMonth: number;
+  healthStatus: string;
+  healthBadgeClass: string;
+  primaryRecommendationTitle: string;
+  primaryRecommendationMessage: string;
+  totalDebtsRemaining: number;
+  totalMonthlyInterestCost: number;
+  totalGoalsTarget: number;
+  totalGoalsCurrent: number;
+  debtActions: DebtRecommendation[];
+  goalActions: GoalRecommendation[];
+  smartTips: string[];
+}

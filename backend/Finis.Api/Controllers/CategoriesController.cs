@@ -80,17 +80,11 @@ public class CategoriesController : BaseApiController
         }
 
         var category = await _context.Categories
-            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+            .FirstOrDefaultAsync(c => c.Id == id && (c.UserId == userId || c.IsDefault));
 
         if (category == null)
         {
-            // Check if it is a default category
-            var isDefault = await _context.Categories.AnyAsync(c => c.Id == id && c.IsDefault);
-            if (isDefault)
-            {
-                return BadRequest(new { message = "Categorias padrão do sistema não podem ser alteradas. Crie uma nova categoria personalizada." });
-            }
-            return NotFound(new { message = "Categoria não encontrada ou não pertencente ao seu usuário." });
+            return NotFound(new { message = "Categoria não encontrada." });
         }
 
         category.Name = dto.Name.Trim();
@@ -101,7 +95,7 @@ public class CategoriesController : BaseApiController
         await _context.SaveChangesAsync();
 
         dto.Id = category.Id;
-        dto.IsDefault = false;
+        dto.IsDefault = category.IsDefault;
 
         return Ok(dto);
     }
@@ -112,16 +106,21 @@ public class CategoriesController : BaseApiController
         var userId = GetUserId();
 
         var category = await _context.Categories
-            .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+            .FirstOrDefaultAsync(c => c.Id == id && (c.UserId == userId || c.IsDefault));
 
         if (category == null)
         {
-            var isDefault = await _context.Categories.AnyAsync(c => c.Id == id && c.IsDefault);
-            if (isDefault)
-            {
-                return BadRequest(new { message = "Categorias padrão do sistema não podem ser excluídas." });
-            }
-            return NotFound(new { message = "Categoria não encontrada ou não pertencente ao seu usuário." });
+            return NotFound(new { message = "Categoria não encontrada." });
+        }
+
+        // Dissociate transactions before removing category to preserve financial history
+        var transactions = await _context.Transactions
+            .Where(t => t.CategoryId == id)
+            .ToListAsync();
+
+        foreach (var t in transactions)
+        {
+            t.CategoryId = null;
         }
 
         _context.Categories.Remove(category);

@@ -1,0 +1,628 @@
+<div class="container-fluid px-md-4 py-4">
+  <!-- Top Bar: Navigation & Actions -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+      <div class="d-flex align-items-center gap-2">
+        <h2 class="fw-bold mb-0 text-dark">Planejamento: Metas & Dívidas</h2>
+        <span class="badge bg-primary-subtle text-primary border">Finis Advisor</span>
+      </div>
+      <p class="text-muted small mb-0">Estratégias inteligentes para quitar dívidas mais rápido e acelerar a conquista das suas metas</p>
+    </div>
+
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold shadow-sm" (click)="openCreateDebtModal()">
+        <i class="bi bi-plus-circle me-1"></i> Nova Dívida
+      </button>
+      <button class="btn btn-success btn-sm rounded-pill px-3 fw-semibold shadow-sm" (click)="openCreateGoalModal()">
+        <i class="bi bi-plus-circle-fill me-1"></i> Nova Meta
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <button class="btn btn-sm rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
+      [ngClass]="activeTab === 'advisor' ? 'btn-primary text-white shadow-sm' : 'btn-light border text-dark'"
+      (click)="setTab('advisor')">
+      <i class="bi bi-robot"></i>
+      <span>Assistente Inteligente</span>
+      <span *ngIf="advisor" class="badge bg-white text-primary rounded-pill ms-1" style="font-size: 0.65rem;">
+        {{ advisor.healthStatus }}
+      </span>
+    </button>
+
+    <button class="btn btn-sm rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
+      [ngClass]="activeTab === 'goals' ? 'btn-success text-white shadow-sm' : 'btn-light border text-dark'"
+      (click)="setTab('goals')">
+      <i class="bi bi-bullseye"></i>
+      <span>Minhas Metas</span>
+      <span class="badge rounded-pill ms-1" [ngClass]="activeTab === 'goals' ? 'bg-white text-success' : 'bg-secondary text-white'" style="font-size: 0.65rem;">
+        {{ goals.length }}
+      </span>
+    </button>
+
+    <button class="btn btn-sm rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
+      [ngClass]="activeTab === 'debts' ? 'btn-danger text-white shadow-sm' : 'btn-light border text-dark'"
+      (click)="setTab('debts')">
+      <i class="bi bi-shield-slash"></i>
+      <span>Minhas Dívidas</span>
+      <span class="badge rounded-pill ms-1" [ngClass]="activeTab === 'debts' ? 'bg-white text-danger' : 'bg-secondary text-white'" style="font-size: 0.65rem;">
+        {{ debts.length }}
+      </span>
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status"></div>
+    <p class="text-muted small mt-2">Consultando assistente financeiro e calculando cenários...</p>
+  </div>
+
+  <!-- TAB 1: FINIS ADVISOR (ASSISTENTE INTELIGENTE) -->
+  <div *ngIf="!loading && activeTab === 'advisor'">
+    <div *ngIf="advisor">
+      <!-- Top Health Card Banner -->
+      <div class="card border-0 mb-4 shadow-sm text-white overflow-hidden rounded-4" style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);">
+        <div class="card-body p-4 position-relative">
+          <div class="row align-items-center g-4">
+            <div class="col-12 col-lg-8">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary text-white" style="width: 32px; height: 32px;">
+                  <i class="bi bi-stars"></i>
+                </div>
+                <span class="text-uppercase small fw-bold tracking-wide" style="letter-spacing: 1px; color: #94A3B8;">Diagnóstico Finis Advisor</span>
+                <span class="badge px-2 py-1" [ngClass]="advisor.healthBadgeClass">{{ advisor.healthStatus }}</span>
+              </div>
+              <h3 class="fw-bold mb-2">{{ advisor.primaryRecommendationTitle }}</h3>
+              <p class="mb-0 text-light opacity-90 fs-6" style="max-width: 700px; line-height: 1.5;">
+                {{ advisor.primaryRecommendationMessage }}
+              </p>
+            </div>
+
+            <div class="col-12 col-lg-4 text-lg-end">
+              <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.07); backdrop-filter: blur(8px);">
+                <span class="d-block small text-light opacity-75 mb-1">Previsão de Sobra no Mês</span>
+                <h3 class="mono-num fw-bold mb-1" [ngClass]="advisor.projectedSurplus >= 0 ? 'text-emerald' : 'text-danger'" [style.color]="advisor.projectedSurplus >= 0 ? '#34D399' : '#F87171'">
+                  {{ advisor.projectedSurplus >= 0 ? '+' : '' }}R$ {{ advisor.projectedSurplus | number:'1.2-2' }}
+                </h3>
+                <span class="d-block small text-light opacity-75" style="font-size: 0.75rem;">
+                  Teto Diário Seguro: <strong>R$ {{ advisor.dailySafeSpendingTarget | number:'1.2-2' }}/dia</strong>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Plan Split: Debts vs Goals -->
+      <div class="row g-4 mb-4">
+        <!-- Debts Strategy Column (Avalanche) -->
+        <div class="col-12 col-lg-6">
+          <div class="card card-finis p-4 h-100 border-start border-4 border-danger">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                  <i class="bi bi-fire text-danger"></i> Quitação Estratégica de Dívidas
+                </h5>
+                <span class="text-muted small">Priorização por <strong>Método Avalanche</strong> (maior juro) ou <strong>Bola de Neve</strong> (menor saldo)</span>
+              </div>
+              <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                {{ advisor.debtActions.length }} ativas
+              </span>
+            </div>
+
+            <div *ngIf="advisor.debtActions.length === 0" class="text-center py-4 text-muted">
+              <i class="bi bi-shield-check text-success fs-1 mb-2 d-block"></i>
+              <h6 class="fw-bold text-dark">Nenhuma dívida ativa cadastrada!</h6>
+              <p class="small text-muted mb-3">Você não possui dívidas registradas no momento. Toda a sua sobra pode ser direcionada para suas metas!</p>
+              <button class="btn btn-outline-secondary btn-sm rounded-pill" (click)="openCreateDebtModal()">
+                + Cadastrar Dívida
+              </button>
+            </div>
+
+            <div *ngIf="advisor.debtActions.length > 0" class="d-flex flex-column gap-3">
+              <div *ngFor="let da of advisor.debtActions" class="p-3 bg-light rounded-3 border">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                      <h6 class="fw-bold mb-0 text-dark">{{ da.debtName }}</h6>
+                      <span *ngIf="da.creditor" class="badge bg-secondary-subtle text-secondary border small px-2 py-0.5" style="font-size: 0.70rem;">
+                        <i class="bi bi-bank me-1"></i>{{ da.creditor }}
+                      </span>
+                    </div>
+                    <span class="badge bg-danger-subtle text-danger small mt-1" style="font-size: 0.68rem;">
+                      {{ da.urgencyLabel }} • {{ da.interestRateMonthly }}% a.m.
+                    </span>
+                  </div>
+                  <div class="text-end">
+                    <span class="text-muted small d-block" style="font-size: 0.68rem;">Saldo Devedor</span>
+                    <strong class="mono-num text-danger">R$ {{ da.remainingAmount | number:'1.2-2' }}</strong>
+                  </div>
+                </div>
+
+                <p class="text-muted small mt-2 mb-2" style="font-size: 0.78rem;">
+                  <i class="bi bi-info-circle me-1 text-primary"></i>{{ da.strategyReason }}
+                </p>
+
+                <div *ngIf="da.suggestedAmortization > 0" class="d-flex justify-content-between align-items-center p-2 rounded-2 mt-2" style="background-color: #FEE2E2;">
+                  <div>
+                    <span class="d-block small text-danger fw-bold" style="font-size: 0.72rem;">SUGESTÃO DE AMORTIZAÇÃO ESTE MÊS</span>
+                    <strong class="mono-num text-danger fs-6">R$ {{ da.suggestedAmortization | number:'1.2-2' }}</strong>
+                  </div>
+                  <div class="text-end" *ngIf="da.estimatedInterestSavedMonthly > 0">
+                    <span class="d-block small text-muted" style="font-size: 0.70rem;">Economia em Juros</span>
+                    <strong class="text-success small">~ R$ {{ da.estimatedInterestSavedMonthly | number:'1.2-2' }}/mês</strong>
+                  </div>
+                  <div class="text-end" *ngIf="da.estimatedInterestSavedMonthly === 0">
+                    <span class="badge bg-danger text-white" style="font-size: 0.70rem;">
+                      <i class="bi bi-snow me-1"></i>Bola de Neve
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Goals Strategy Column -->
+        <div class="col-12 col-lg-6">
+          <div class="card card-finis p-4 h-100 border-start border-4 border-success">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+              <div>
+                <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                  <i class="bi bi-trophy text-success"></i> Aceleração de Metas & Sonhos
+                </h5>
+                <span class="text-muted small">Direcionamento da sobra para metas de alta prioridade</span>
+              </div>
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                {{ advisor.goalActions.length }} ativas
+              </span>
+            </div>
+
+            <div *ngIf="advisor.goalActions.length === 0" class="text-center py-4 text-muted">
+              <i class="bi bi-bullseye text-primary fs-1 mb-2 d-block"></i>
+              <h6 class="fw-bold text-dark">Nenhuma meta cadastrada ainda</h6>
+              <p class="small text-muted mb-3">Cadastre sua Reserva de Emergência ou objetivos futuros para que o assistente crie seu plano de aportes.</p>
+              <button class="btn btn-success btn-sm rounded-pill" (click)="openCreateGoalModal()">
+                + Cadastrar Primeira Meta
+              </button>
+            </div>
+
+            <div *ngIf="advisor.goalActions.length > 0" class="d-flex flex-column gap-3">
+              <div *ngFor="let ga of advisor.goalActions" class="p-3 bg-light rounded-3 border">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                  <div>
+                    <h6 class="fw-bold mb-0 text-dark">{{ ga.goalName }}</h6>
+                    <span class="badge bg-success-subtle text-success small mt-1" style="font-size: 0.68rem;">
+                      {{ (ga.currentAmount / ga.targetAmount * 100) | number:'1.0-0' }}% Concluído
+                    </span>
+                  </div>
+                  <div class="text-end">
+                    <span class="text-muted small d-block" style="font-size: 0.68rem;">Alvo / Atual</span>
+                    <strong class="mono-num text-dark">R$ {{ ga.currentAmount | number:'1.0-0' }}</strong>
+                    <span class="text-muted small"> / R$ {{ ga.targetAmount | number:'1.0-0' }}</span>
+                  </div>
+                </div>
+
+                <p class="text-muted small mt-2 mb-2" style="font-size: 0.78rem;">
+                  <i class="bi bi-check2-circle me-1 text-success"></i>{{ ga.strategyReason }}
+                </p>
+
+                <div *ngIf="ga.suggestedDeposit > 0" class="d-flex justify-content-between align-items-center p-2 rounded-2 mt-2" style="background-color: #DCFCE7;">
+                  <div>
+                    <span class="d-block small text-success fw-bold" style="font-size: 0.72rem;">APORTE SUGERIDO DO MÊS</span>
+                    <strong class="mono-num text-success fs-6">R$ {{ ga.suggestedDeposit | number:'1.2-2' }}</strong>
+                  </div>
+                  <span class="badge bg-success text-white" *ngIf="ga.monthsAhead">
+                    Acelera em 1 mês!
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulator & Tips Row -->
+      <div class="row g-4 mb-4">
+        <!-- Interactive Simulator -->
+        <div class="col-12 col-lg-7">
+          <div class="card card-finis p-4 h-100">
+            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+              <i class="bi bi-calculator text-primary"></i> Simulador de Aporte Extra
+            </h5>
+            <p class="text-muted small mb-3">Recebeu uma renda extra ou sobrou mais dinheiro? Veja o impacto em juros economizados na hora:</p>
+
+            <div class="p-3 bg-light rounded-4 border mb-3">
+              <label class="form-label small fw-semibold text-secondary">Valor do Aporte Extra (R$)</label>
+              <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 fw-bold text-muted">R$</span>
+                <input type="number" class="form-control form-control-lg border-start-0 fw-bold text-dark" [(ngModel)]="simulateExtraAmount" min="50" step="100">
+              </div>
+
+              <div class="mt-3 pt-3 border-top d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+                <div>
+                  <span class="text-muted small d-block">
+                    {{ hasExpensiveDebts() ? 'Economia aproximada em juros futuros:' : 'Impacto na menor dívida (Bola de Neve):' }}
+                  </span>
+                  <h4 class="mono-num fw-bold text-success mb-0" *ngIf="hasExpensiveDebts()">
+                    + R$ {{ getSimulatedDebtSavings() | number:'1.2-2' }}
+                  </h4>
+                  <div *ngIf="!hasExpensiveDebts() && debts.length > 0">
+                    <h4 class="mono-num fw-bold text-primary mb-0 d-inline-block">
+                      R$ {{ getSimulatedSnowballImpact().amortized | number:'1.2-2' }}
+                    </h4>
+                    <span class="small text-muted ms-2">({{ getSimulatedSnowballImpact().message }})</span>
+                  </div>
+                  <span class="text-muted small" *ngIf="debts.length === 0">Nenhuma dívida cadastrada para amortizar.</span>
+                </div>
+                <div class="text-sm-end">
+                  <span class="badge bg-primary-subtle text-primary py-2 px-3">
+                    <i class="bi bi-lightning-charge me-1"></i> Quitação acelerada
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips Highlights -->
+        <div class="col-12 col-lg-5">
+          <div class="card card-finis p-4 h-100">
+            <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+              <i class="bi bi-lightbulb text-warning"></i> Recomendações Estratégicas
+            </h5>
+            <ul class="list-unstyled mb-0 d-flex flex-column gap-3">
+              <li *ngFor="let tip of advisor.smartTips" class="d-flex align-items-start gap-2">
+                <i class="bi bi-check-circle-fill text-success mt-1"></i>
+                <span class="small text-secondary">{{ tip }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: MINHAS METAS -->
+  <div *ngIf="!loading && activeTab === 'goals'">
+    <div *ngIf="goals.length === 0" class="text-center py-5">
+      <div class="rounded-circle bg-light d-inline-flex p-4 text-muted mb-3">
+        <i class="bi bi-bullseye fs-1 text-success"></i>
+      </div>
+      <h4 class="fw-bold text-dark">Nenhuma meta financeira cadastrada</h4>
+      <p class="text-muted small" style="max-width: 480px; margin: 0 auto 20px;">
+        Defina metas para sua Reserva de Emergência, férias, troca de carro ou aposentadoria. O Finis calcula o quanto você precisa guardar todo mês para chegar lá!
+      </p>
+      <button class="btn btn-success rounded-pill px-4 fw-semibold shadow-sm" (click)="openCreateGoalModal()">
+        <i class="bi bi-plus-circle-fill me-1"></i> Criar Primeira Meta
+      </button>
+    </div>
+
+    <div *ngIf="goals.length > 0" class="row g-3">
+      <div *ngFor="let g of goals" class="col-12 col-md-6 col-xl-4">
+        <div class="card card-finis p-4 h-100 position-relative border-top border-4" [style.border-top-color]="g.colorHex + ' !important'">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle d-flex align-items-center justify-content-center text-white shadow-sm" [style.background-color]="g.colorHex" style="width: 42px; height: 42px;">
+                <i class="bi bi-{{ g.icon || 'bullseye' }} fs-5"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0 text-dark">{{ g.name }}</h5>
+                <span class="badge bg-light text-muted border" style="font-size: 0.68rem;">{{ g.category }}</span>
+              </div>
+            </div>
+
+            <div class="dropdown">
+              <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="openEditGoalModal(g)" title="Editar Meta">
+                <i class="bi bi-pencil text-secondary"></i>
+              </button>
+              <button class="btn btn-light btn-sm rounded-circle p-1 text-danger ms-1" style="width: 28px; height: 28px;" (click)="onDeleteGoal(g)" title="Excluir Meta">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Progress -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-muted">Progresso Acumulado</span>
+              <strong class="small fw-bold text-dark">{{ g.percentageCompleted }}%</strong>
+            </div>
+            <div class="progress" style="height: 10px; border-radius: 5px; background-color: #E2E8F0;">
+              <div class="progress-bar" role="progressbar" [style.width.%]="g.percentageCompleted" [style.background-color]="g.colorHex"></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between small pt-2 border-top mb-3">
+            <div>
+              <span class="text-muted d-block" style="font-size: 0.70rem;">GUARDADO</span>
+              <strong class="mono-num text-success fs-6">R$ {{ g.currentAmount | number:'1.2-2' }}</strong>
+            </div>
+            <div class="text-end">
+              <span class="text-muted d-block" style="font-size: 0.70rem;">OBJETIVO</span>
+              <strong class="mono-num text-dark fs-6">R$ {{ g.targetAmount | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <!-- Monthly requirement & Actions -->
+          <div class="p-2 bg-light rounded-3 d-flex justify-content-between align-items-center mb-3" style="font-size: 0.75rem;">
+            <span class="text-muted">Aporte Mensal Recomendado:</span>
+            <strong class="text-primary mono-num">R$ {{ g.monthlyRequiredSavings | number:'1.2-2' }}/mês</strong>
+          </div>
+
+          <div class="d-flex gap-2 mt-auto">
+            <button class="btn btn-success btn-sm flex-fill rounded-pill py-2 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-1" (click)="openDepositGoalModal(g, false)">
+              <i class="bi bi-plus-lg"></i> Aportar
+            </button>
+            <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 fw-semibold" (click)="openDepositGoalModal(g, true)" title="Retirar da meta">
+              <i class="bi bi-dash-lg"></i> Retirar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: MINHAS DÍVIDAS -->
+  <div *ngIf="!loading && activeTab === 'debts'">
+    <div *ngIf="debts.length === 0" class="text-center py-5">
+      <div class="rounded-circle bg-light d-inline-flex p-4 text-muted mb-3">
+        <i class="bi bi-shield-check fs-1 text-success"></i>
+      </div>
+      <h4 class="fw-bold text-dark">Nenhuma dívida cadastrada</h4>
+      <p class="text-muted small" style="max-width: 480px; margin: 0 auto 20px;">
+        Cadastre seus empréstimos, financiamentos ou contas pendentes para que o assistente analise as taxas de juros e crie o melhor plano de amortização para você!
+      </p>
+      <button class="btn btn-danger rounded-pill px-4 fw-semibold shadow-sm" (click)="openCreateDebtModal()">
+        <i class="bi bi-plus-circle me-1"></i> Cadastrar Dívida
+      </button>
+    </div>
+
+    <div *ngIf="debts.length > 0" class="row g-3">
+      <div *ngFor="let d of debts" class="col-12 col-md-6 col-xl-4">
+        <div class="card card-finis p-4 h-100 position-relative border-top border-4" [style.border-top-color]="d.colorHex + ' !important'">
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <div class="d-flex align-items-center gap-2">
+                <h5 class="fw-bold mb-0 text-dark">{{ d.name }}</h5>
+                <span *ngIf="d.isSettled" class="badge bg-success-subtle text-success">Quitada</span>
+              </div>
+              <span class="text-muted small">{{ d.creditor || 'Sem credor especificado' }}</span>
+            </div>
+
+            <div class="d-flex align-items-center gap-1">
+              <button class="btn btn-light btn-sm rounded-circle p-1" style="width: 28px; height: 28px;" (click)="openEditDebtModal(d)" title="Editar Dívida">
+                <i class="bi bi-pencil text-secondary"></i>
+              </button>
+              <button class="btn btn-light btn-sm rounded-circle p-1 text-danger" style="width: 28px; height: 28px;" (click)="onDeleteDebt(d)" title="Excluir Dívida">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Interest Rate & Alert -->
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge" [ngClass]="d.interestRateMonthly >= 3.0 ? 'bg-danger text-white' : 'bg-warning-subtle text-dark'" style="font-size: 0.75rem;">
+              <i class="bi bi-percent me-1"></i>{{ d.interestRateMonthly }}% ao mês
+            </span>
+            <span class="text-muted small">Vence dia {{ d.dueDay }}</span>
+          </div>
+
+          <!-- Progress -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-muted">Amortizado</span>
+              <strong class="small fw-bold text-dark">{{ d.percentagePaid }}%</strong>
+            </div>
+            <div class="progress" style="height: 10px; border-radius: 5px; background-color: #E2E8F0;">
+              <div class="progress-bar bg-danger" role="progressbar" [style.width.%]="d.percentagePaid"></div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between small pt-2 border-top mb-3">
+            <div>
+              <span class="text-muted d-block" style="font-size: 0.70rem;">SALDO DEVEDOR</span>
+              <strong class="mono-num text-danger fs-6">R$ {{ d.remainingAmount | number:'1.2-2' }}</strong>
+            </div>
+            <div class="text-end">
+              <span class="text-muted d-block" style="font-size: 0.70rem;">PARCELA MENSAL</span>
+              <strong class="mono-num text-dark fs-6">R$ {{ d.monthlyPayment | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="mt-auto">
+            <button class="btn btn-outline-danger btn-sm w-100 rounded-pill py-2 fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-1"
+              (click)="openAmortizeDebtModal(d)" [disabled]="d.isSettled">
+              <i class="bi bi-arrow-down-circle"></i> Amortizar / Abater Dívida
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 1: CRIAR / EDITAR META -->
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isGoalModalOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-bottom py-3 px-4 bg-light">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-bullseye text-success"></i>
+          <span>{{ editingGoalId ? 'Editar Meta Financeira' : 'Nova Meta Financeira' }}</span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeGoalModal()" [disabled]="goalLoading"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="goalError" class="alert alert-danger py-2 small mb-3">
+          {{ goalError }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Nome do Objetivo</label>
+          <input type="text" class="form-control" [(ngModel)]="goalName" placeholder="Ex: Reserva de Emergência, Férias em Natal...">
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Valor Alvo (R$)</label>
+            <input type="number" class="form-control fw-bold" [(ngModel)]="goalTargetAmount" placeholder="Ex: 10000">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Já Guardado (R$)</label>
+            <input type="number" class="form-control" [(ngModel)]="goalCurrentAmount" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Data Limite (Prazo)</label>
+            <input type="date" class="form-control" [(ngModel)]="goalTargetDate">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Prioridade</label>
+            <select class="form-select" [(ngModel)]="goalPriority">
+              <option [ngValue]="1">Alta Prioridade</option>
+              <option [ngValue]="2">Média Prioridade</option>
+              <option [ngValue]="3">Baixa Prioridade</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Category Presets -->
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary d-block">Tipo de Meta</label>
+          <div class="d-flex flex-wrap gap-2">
+            <button *ngFor="let cat of goalCategories" type="button"
+              class="btn btn-sm rounded-pill d-flex align-items-center gap-1"
+              [ngClass]="goalCategory === cat.name ? 'btn-success text-white' : 'btn-light border text-dark'"
+              (click)="onSelectGoalCategory(cat)">
+              <i class="bi bi-{{ cat.icon }}"></i>
+              <span>{{ cat.name }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top py-3 px-4 bg-light">
+        <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeGoalModal()" [disabled]="goalLoading">Cancelar</button>
+        <button type="button" class="btn btn-success rounded-pill px-4 fw-semibold" (click)="onSaveGoal()" [disabled]="goalLoading">
+          <span *ngIf="goalLoading" class="spinner-border spinner-border-sm me-1"></span>
+          Salvar Meta
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 2: CRIAR / EDITAR DÍVIDA -->
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isDebtModalOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-bottom py-3 px-4 bg-light">
+        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-shield-slash text-danger"></i>
+          <span>{{ editingDebtId ? 'Editar Dívida' : 'Cadastrar Dívida / Financiamento' }}</span>
+        </h5>
+        <button type="button" class="btn-close" (click)="closeDebtModal()" [disabled]="debtLoading"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="debtError" class="alert alert-danger py-2 small mb-3">
+          {{ debtError }}
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-7">
+            <label class="form-label small fw-semibold text-secondary">Nome da Dívida</label>
+            <input type="text" class="form-control" [(ngModel)]="debtName" placeholder="Ex: Empréstimo Caixa, Cartão Rotativo...">
+          </div>
+          <div class="col-5">
+            <label class="form-label small fw-semibold text-secondary">Credor / Banco</label>
+            <input type="text" class="form-control" [(ngModel)]="debtCreditor" placeholder="Ex: Nubank, Itaú">
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Valor Total Inicial (R$)</label>
+            <input type="number" class="form-control" [(ngModel)]="debtTotalAmount" placeholder="Ex: 5000">
+          </div>
+          <div class="col-6">
+            <label class="form-label small fw-semibold text-secondary">Saldo Devedor Atual (R$)</label>
+            <input type="number" class="form-control fw-bold text-danger" [(ngModel)]="debtRemainingAmount" placeholder="Ex: 3800">
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-4">
+            <label class="form-label small fw-semibold text-secondary">Juros (% a.m.)</label>
+            <input type="number" step="0.1" class="form-control" [(ngModel)]="debtInterestRate" placeholder="0">
+            <span class="text-muted d-block mt-1" style="font-size: 0.65rem;">0% ou taxa rotativo</span>
+          </div>
+          <div class="col-4">
+            <label class="form-label small fw-semibold text-secondary">Parcela (R$)</label>
+            <input type="number" class="form-control" [(ngModel)]="debtMonthlyPayment" placeholder="Ex: 350">
+          </div>
+          <div class="col-4">
+            <label class="form-label small fw-semibold text-secondary">Dia Venc.</label>
+            <input type="number" min="1" max="31" class="form-control" [(ngModel)]="debtDueDay" placeholder="10">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Observações / Plano de Quitação</label>
+          <textarea class="form-control" [(ngModel)]="debtNotes" rows="2" placeholder="Ex: Contrato em 12x, pretendo quitar até Dezembro..."></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top py-3 px-4 bg-light">
+        <button type="button" class="btn btn-light rounded-pill px-4" (click)="closeDebtModal()" [disabled]="debtLoading">Cancelar</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4 fw-semibold" (click)="onSaveDebt()" [disabled]="debtLoading">
+          <span *ngIf="debtLoading" class="spinner-border spinner-border-sm me-1"></span>
+          Salvar Dívida
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL 3: AÇÃO RÁPIDA (APORTAR / RETIRAR META OU AMORTIZAR DÍVIDA) -->
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isQuickActionModalOpen" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content card-finis border-0 shadow-lg overflow-hidden">
+      <div class="modal-header border-bottom py-3 px-4 bg-light">
+        <h6 class="modal-title fw-bold text-dark mb-0">{{ quickActionTitle }}</h6>
+        <button type="button" class="btn-close" (click)="closeQuickActionModal()" [disabled]="quickActionLoading"></button>
+      </div>
+
+      <div class="modal-body p-4">
+        <div *ngIf="quickActionError" class="alert alert-danger py-2 small mb-3">
+          {{ quickActionError }}
+        </div>
+
+        <p class="small text-muted mb-2">
+          Item: <strong class="text-dark">{{ quickActionTargetName }}</strong>
+        </p>
+
+        <label class="form-label small fw-semibold text-secondary">Informe o Valor (R$)</label>
+        <div class="input-group">
+          <span class="input-group-text bg-white border-end-0 fw-bold">R$</span>
+          <input type="number" class="form-control form-control-lg border-start-0 fw-bold" [(ngModel)]="quickActionAmount" placeholder="0.00" autofocus>
+        </div>
+      </div>
+
+      <div class="modal-footer border-top py-3 px-4 bg-light">
+        <button type="button" class="btn btn-light rounded-pill px-3" (click)="closeQuickActionModal()" [disabled]="quickActionLoading">Cancelar</button>
+        <button type="button" class="btn rounded-pill px-4 fw-semibold"
+          [ngClass]="quickActionType === 'amortizeDebt' ? 'btn-danger' : 'btn-success'"
+          (click)="onConfirmQuickAction()" [disabled]="quickActionLoading">
+          <span *ngIf="quickActionLoading" class="spinner-border spinner-border-sm me-1"></span>
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

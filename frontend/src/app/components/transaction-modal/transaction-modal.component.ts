@@ -156,9 +156,9 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
   filterCategories(): void {
     const curType = Number(this.type);
     this.filteredCategories = this.categories.filter(c => Number(c.type) === curType);
-    this.otherCategories = this.categories.filter(c => Number(c.type) !== curType);
+    this.otherCategories = [];
 
-    if (this.categoryId && !this.categories.some(c => c.id === this.categoryId)) {
+    if (this.categoryId && !this.filteredCategories.some(c => c.id === this.categoryId)) {
       this.categoryId = null;
     }
   }

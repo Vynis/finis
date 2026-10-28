@@ -116,6 +116,55 @@ public static class DbInitializer
                 await cmd.ExecuteNonQueryAsync();
             }
 
+            // 1.2 Create Goals table if it does not exist
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS `Goals` (
+                        `Id` int NOT NULL AUTO_INCREMENT,
+                        `UserId` int NOT NULL,
+                        `AccountId` int NULL,
+                        `Name` varchar(100) CHARACTER SET utf8mb4 NOT NULL,
+                        `TargetAmount` decimal(18,2) NOT NULL,
+                        `CurrentAmount` decimal(18,2) NOT NULL DEFAULT 0.00,
+                        `TargetDate` datetime(6) NULL,
+                        `Category` varchar(50) CHARACTER SET utf8mb4 NOT NULL DEFAULT 'Geral',
+                        `ColorHex` varchar(20) CHARACTER SET utf8mb4 NOT NULL DEFAULT '#10B981',
+                        `Icon` varchar(50) CHARACTER SET utf8mb4 NOT NULL DEFAULT 'bullseye',
+                        `Priority` int NOT NULL DEFAULT 2,
+                        `IsCompleted` tinyint(1) NOT NULL DEFAULT 0,
+                        `CreatedAt` datetime(6) NOT NULL,
+                        CONSTRAINT `PK_Goals` PRIMARY KEY (`Id`),
+                        CONSTRAINT `FK_Goals_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+                    ) CHARACTER SET=utf8mb4;";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            // 1.3 Create Debts table if it does not exist
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS `Debts` (
+                        `Id` int NOT NULL AUTO_INCREMENT,
+                        `UserId` int NOT NULL,
+                        `AccountId` int NULL,
+                        `Name` varchar(100) CHARACTER SET utf8mb4 NOT NULL,
+                        `Creditor` varchar(100) CHARACTER SET utf8mb4 NULL,
+                        `TotalAmount` decimal(18,2) NOT NULL,
+                        `RemainingAmount` decimal(18,2) NOT NULL,
+                        `InterestRateMonthly` decimal(5,2) NOT NULL DEFAULT 0.00,
+                        `MonthlyPayment` decimal(18,2) NOT NULL DEFAULT 0.00,
+                        `DueDay` int NOT NULL DEFAULT 10,
+                        `ColorHex` varchar(20) CHARACTER SET utf8mb4 NOT NULL DEFAULT '#EF4444',
+                        `Notes` varchar(500) CHARACTER SET utf8mb4 NULL,
+                        `IsSettled` tinyint(1) NOT NULL DEFAULT 0,
+                        `CreatedAt` datetime(6) NOT NULL,
+                        CONSTRAINT `PK_Debts` PRIMARY KEY (`Id`),
+                        CONSTRAINT `FK_Debts_Users_UserId` FOREIGN KEY (`UserId`) REFERENCES `Users` (`Id`) ON DELETE CASCADE
+                    ) CHARACTER SET=utf8mb4;";
+                await cmd.ExecuteNonQueryAsync();
+            }
+
             // 2. Ensure new columns in Transactions table
             await EnsureColumnAsync(conn, "Transactions", "CreditCardId", "int NULL");
             await EnsureColumnAsync(conn, "Transactions", "InstallmentNumber", "int NULL");

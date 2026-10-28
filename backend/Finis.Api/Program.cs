@@ -45,6 +45,7 @@ builder.Services.AddDbContext<FinisDbContext>(options =>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITermometroEngineService, TermometroEngineService>();
 builder.Services.AddScoped<ICreditCardService, CreditCardService>();
+builder.Services.AddScoped<IFinisAdvisorService, FinisAdvisorService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "FinisSecureSuperSecretKey2026!FinisFinancialCashflowTermometroLongSecretKey";

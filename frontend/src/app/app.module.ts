@@ -17,6 +17,7 @@ import { ResetModalComponent } from './components/reset-modal/reset-modal.compon
 import { CategoriesComponent } from './components/categories/categories.component';
 import { CreditCardsComponent } from './components/credit-cards/credit-cards.component';
 import { AccountsComponent } from './components/accounts/accounts.component';
+import { GoalsDebtsComponent } from './components/goals-debts/goals-debts.component';
 import { JwtInterceptor } from './services/jwt.interceptor';
 
 @NgModule({
@@ -33,7 +34,8 @@ import { JwtInterceptor } from './services/jwt.interceptor';
     ResetModalComponent,
     CategoriesComponent,
     CreditCardsComponent,
-    AccountsComponent
+    AccountsComponent,
+    GoalsDebtsComponent
   ],
   imports: [
     BrowserModule,
