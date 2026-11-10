@@ -144,21 +144,26 @@
 
     <!-- Top KPI Cards Grid -->
     <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4">
-      <!-- Termômetro: Saldo Atual -->
+      <!-- Termômetro: Saldo no Banco (Real vs Projetado) -->
       <div class="col">
-        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="summary.currentBalance >= 0 ? 'border-success' : 'border-danger'">
+        <div class="card card-finis p-3 h-100 border-start border-4" [ngClass]="(summary.realBankBalance ?? (summary.initialBalance + (summary.realizedIncome || 0) - (summary.realizedExpenses || 0))) >= 0 ? 'border-success' : 'border-danger'">
           <div class="d-flex justify-content-between align-items-start mb-2">
-            <span class="text-muted small fw-semibold text-uppercase">Saldo em Conta</span>
-            <span class="badge" [ngClass]="summary.currentBalance >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
-              {{ summary.currentBalance >= 0 ? 'Positivo' : 'Alerta' }}
+            <span class="text-muted small fw-semibold text-uppercase">Saldo no Banco</span>
+            <span class="badge" [ngClass]="(summary.realBankBalance ?? (summary.initialBalance + (summary.realizedIncome || 0) - (summary.realizedExpenses || 0))) >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'" title="Saldo real compensado no banco">
+              <i class="bi bi-bank me-1"></i>Real
             </span>
           </div>
-          <h4 class="mono-num fw-bold mb-1" [ngClass]="summary.currentBalance >= 0 ? 'text-success' : 'text-danger'">
-            R$ {{ summary.currentBalance | number:'1.2-2' }}
+          <h4 class="mono-num fw-bold mb-1" [ngClass]="(summary.realBankBalance ?? (summary.initialBalance + (summary.realizedIncome || 0) - (summary.realizedExpenses || 0))) >= 0 ? 'text-success' : 'text-danger'">
+            R$ {{ (summary.realBankBalance ?? (summary.initialBalance + (summary.realizedIncome || 0) - (summary.realizedExpenses || 0))) | number:'1.2-2' }}
           </h4>
-          <span class="text-muted" style="font-size: 0.72rem;">
-            Partida: <strong>R$ {{ summary.initialBalance | number:'1.2-2' }}</strong>
-          </span>
+          <div class="d-flex justify-content-between text-muted" style="font-size: 0.70rem;">
+            <span title="Saldo projetado no Termômetro considerando contas e faturas vencidas até hoje">
+              Projetado: <strong [ngClass]="summary.currentBalance >= 0 ? 'text-success' : 'text-danger'">R$ {{ summary.currentBalance | number:'1.0-0' }}</strong>
+            </span>
+            <span title="Saldo de partida no início do mês">
+              Partida: <strong>R$ {{ summary.initialBalance | number:'1.0-0' }}</strong>
+            </span>
+          </div>
         </div>
       </div>
 

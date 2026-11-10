@@ -288,14 +288,57 @@ public class CreditCardService : ICreditCardService
         var card = await _context.CreditCards.AsNoTracking().FirstOrDefaultAsync(c => c.Id == cardId && c.UserId == userId);
         if (card == null) return new List<CreditCardInvoiceSummaryDto>();
 
-        var (currentInvYear, currentInvMonth, _) = CalculateInvoicePeriod(DateTime.Today, card.ClosingDay, card.DueDay);
+        // Find all paid invoice periods for this card
+        var paidInvoiceKeys = await _context.Transactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && t.CreditCardId == cardId && t.IsInvoicePayment && t.InvoiceYear != null && t.InvoiceMonth != null)
+            .Select(t => new { Year = t.InvoiceYear!.Value, Month = t.InvoiceMonth!.Value })
+            .ToListAsync();
+
+        var paidSet = new HashSet<(int Year, int Month)>(paidInvoiceKeys.Select(p => (p.Year, p.Month)));
+
+        // Find all invoice periods that have purchases
+        var invoicePeriodsWithPurchases = await _context.Transactions
+            .AsNoTracking()
+            .Where(t => t.UserId == userId && t.CreditCardId == cardId && !t.IsInvoicePayment && t.InvoiceYear != null && t.InvoiceMonth != null)
+            .Select(t => new { Year = t.InvoiceYear!.Value, Month = t.InvoiceMonth!.Value })
+            .Distinct()
+            .ToListAsync();
+
+        // Earliest unpaid invoice with purchases
+        var unpaidPeriods = invoicePeriodsWithPurchases
+            .Where(p => !paidSet.Contains((p.Year, p.Month)))
+            .OrderBy(p => p.Year).ThenBy(p => p.Month)
+            .ToList();
+
+        // Next open invoice for new purchases
+        var (nextPurchaseYear, nextPurchaseMonth, _) = CalculateInvoicePeriod(DateTime.Today, card.ClosingDay, card.DueDay);
+
+        // The closed invoice currently awaiting payment (or due this month) is 1 month before nextPurchaseMonth
+        var currentlyDueMonthDate = new DateTime(nextPurchaseYear, nextPurchaseMonth, 1).AddMonths(-1);
+
+        DateTime startDate = currentlyDueMonthDate;
+
+        // If there is an unpaid invoice even earlier, start from that unpaid invoice so user can pay it
+        if (unpaidPeriods.Any())
+        {
+            var earliestUnpaid = unpaidPeriods.First();
+            var earliestUnpaidDate = new DateTime(earliestUnpaid.Year, earliestUnpaid.Month, 1);
+            if (earliestUnpaidDate < startDate)
+            {
+                startDate = earliestUnpaidDate;
+            }
+        }
+
+        // Always show from startDate to cover the closed unpaid invoice, the next open invoice, and future installments
+        int monthsAhead = ((nextPurchaseYear - startDate.Year) * 12 + nextPurchaseMonth - startDate.Month) + 5;
+        int totalToFetch = Math.Min(12, Math.Max(count, monthsAhead));
 
         var list = new List<CreditCardInvoiceSummaryDto>();
-        var baseDate = new DateTime(currentInvYear, currentInvMonth, 1);
 
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i < totalToFetch; i++)
         {
-            var target = baseDate.AddMonths(i);
+            var target = startDate.AddMonths(i);
             var summary = await GetInvoiceSummaryAsync(userId, cardId, target.Year, target.Month);
             if (summary != null)
             {

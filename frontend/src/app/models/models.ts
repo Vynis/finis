@@ -33,6 +33,7 @@ export interface Account {
   typeName: string;
   initialBalance: number;
   currentBalance: number;
+  projectedBalance?: number;
   colorHex: string;
   icon: string;
   isActive: boolean;
@@ -170,6 +171,7 @@ export interface TransactionCreateUpdate {
   installments?: number;
   isRecurring?: boolean;
   recurrenceMonths?: number;
+  numberInstallments?: boolean;
 }
 
 export interface DailyFlow {
@@ -182,6 +184,7 @@ export interface DailyFlow {
   totalExpenses: number;
   netDay: number;
   cumulativeBalance: number;
+  realBalance?: number;
   transactionsCount: number;
   transactions: Transaction[];
   expanded?: boolean;
@@ -198,6 +201,7 @@ export interface MonthlyFlowResponse {
   totalExpenses: number;
   performance: number;
   finalBalance: number;
+  realBankBalance?: number;
   savingsRate: number;
   days: DailyFlow[];
 }
@@ -250,6 +254,7 @@ export interface DashboardSummary {
   month: number;
   monthName: string;
   currentBalance: number;
+  realBankBalance?: number;
   initialBalance: number;
   monthIncome: number;
   monthFixedExpenses: number;

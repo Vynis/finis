@@ -28,11 +28,11 @@
   <div class="row g-3 mb-4">
     <div class="col-12 col-md-4">
       <div class="card card-finis p-3 border-start border-4 border-success">
-        <span class="text-muted small fw-semibold text-uppercase">Saldo Atual Consolidado</span>
+        <span class="text-muted small fw-semibold text-uppercase">Saldo Real Consolidado</span>
         <h3 class="mono-num fw-bold mb-0" [ngClass]="getTotalCurrentBalance() >= 0 ? 'text-success' : 'text-danger'">
           R$ {{ getTotalCurrentBalance() | number:'1.2-2' }}
         </h3>
-        <span class="text-muted" style="font-size: 0.72rem;">Soma em todas as contas</span>
+        <span class="text-muted" style="font-size: 0.72rem;">Soma compensada em todas as contas</span>
       </div>
     </div>
 
@@ -94,7 +94,7 @@
 
           <div class="bg-light p-3 rounded-3 mb-3">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="text-muted small">Saldo Atual:</span>
+              <span class="text-muted small">Saldo no Banco (Real):</span>
               <span class="mono-num fw-bold fs-5" [ngClass]="acc.currentBalance >= 0 ? 'text-success' : 'text-danger'">
                 R$ {{ acc.currentBalance | number:'1.2-2' }}
               </span>

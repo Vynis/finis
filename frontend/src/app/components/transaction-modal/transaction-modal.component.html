@@ -183,34 +183,83 @@
             </div>
           </div>
 
-          <!-- Opção de Repetição / Lançamento Fixo Recorrente -->
+          <!-- Opção de Repetição / Parcelamento em Boleto / Pix / Outros -->
           <div *ngIf="paymentMethod !== 2 && !transactionToEdit" class="p-2.5 mb-2.5 bg-light rounded-3 border border-secondary-subtle">
             <div class="form-check form-switch mb-0 d-flex align-items-center justify-content-between p-0">
               <label class="form-check-label small fw-bold text-dark d-flex align-items-center gap-2 cursor-pointer" for="recurringSwitch">
                 <i class="bi bi-arrow-repeat text-primary fs-6"></i>
-                <span>Repetir este lançamento nos próximos meses</span>
+                <span>Repetir / Parcelar nos próximos meses (Boleto, Carnê...)</span>
               </label>
               <input class="form-check-input ms-0 cursor-pointer" type="checkbox" id="recurringSwitch" [(ngModel)]="isRecurring" name="isRecurring">
             </div>
 
-            <div *ngIf="isRecurring" class="mt-2 pt-2 border-top">
-              <div class="row g-2 align-items-center">
+            <div *ngIf="isRecurring" class="mt-2.5 pt-2 border-top">
+              <div class="row g-2 align-items-center mb-2">
                 <div class="col-sm-7">
-                  <label class="form-label small text-muted mb-1">Repetir por quanto tempo?</label>
-                  <select class="form-select form-select-sm" [(ngModel)]="recurrenceMonths" name="recurrenceMonths">
-                    <option [ngValue]="2">2 meses</option>
-                    <option [ngValue]="3">3 meses</option>
-                    <option [ngValue]="6">6 meses</option>
-                    <option [ngValue]="12">12 meses (1 ano)</option>
-                    <option [ngValue]="24">24 meses (2 anos)</option>
-                    <option [ngValue]="36">36 meses (3 anos)</option>
-                  </select>
+                  <label class="form-label small text-muted mb-1">Quantidade de meses / parcelas:</label>
+                  <div class="input-group input-group-sm">
+                    <select class="form-select form-select-sm" [(ngModel)]="recurrenceMonths" name="recurrenceMonths">
+                      <option [ngValue]="2">2 meses (2x)</option>
+                      <option [ngValue]="3">3 meses (3x)</option>
+                      <option [ngValue]="4">4 meses (4x)</option>
+                      <option [ngValue]="5">5 meses (5x)</option>
+                      <option [ngValue]="6">6 meses (6x)</option>
+                      <option [ngValue]="10">10 meses (10x)</option>
+                      <option [ngValue]="12">12 meses (1 ano)</option>
+                      <option [ngValue]="18">18 meses (18x)</option>
+                      <option [ngValue]="24">24 meses (2 anos)</option>
+                      <option [ngValue]="30">30 meses (30 vezes)</option>
+                      <option [ngValue]="36">36 meses (3 anos)</option>
+                      <option [ngValue]="48">48 meses (4 anos)</option>
+                      <option [ngValue]="60">60 meses (5 anos)</option>
+                    </select>
+                    <input type="number" min="2" max="60" class="form-control form-control-sm text-center fw-bold" style="max-width: 75px;" [(ngModel)]="recurrenceMonths" name="recurrenceMonthsDirect" placeholder="30" title="Digite a quantidade exata">
+                    <span class="input-group-text small bg-white text-muted">x</span>
+                  </div>
                 </div>
+
                 <div class="col-sm-5 pt-sm-3">
-                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1.5 px-2 w-100 text-wrap text-start" style="font-size: 0.68rem;">
-                    <i class="bi bi-info-circle me-1"></i> Meses futuros criados como <strong>Previsto</strong>.
+                  <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input cursor-pointer" type="checkbox" id="numberInstallmentsCheck" [(ngModel)]="numberInstallments" name="numberInstallments">
+                    <label class="form-check-label small cursor-pointer fw-semibold text-secondary" for="numberInstallmentsCheck" style="font-size: 0.75rem;">
+                      Numerar parcelas (1/{{ recurrenceMonths }})
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Modo do Valor informado: Por Parcela vs Total da Compra -->
+              <div class="p-2 rounded-2 bg-white border mb-2" style="font-size: 0.75rem;">
+                <span class="text-muted d-block mb-1 fw-semibold">O valor de R$ {{ amount || 0 | number:'1.2-2' }} digitado no formulário representa:</span>
+                <div class="d-flex align-items-center gap-3">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input cursor-pointer" type="radio" name="amountMode" id="modePerInst" value="per_installment" [(ngModel)]="amountMode">
+                    <label class="form-check-label cursor-pointer text-dark" for="modePerInst">
+                      Valor de <strong>cada parcela</strong> (R$ {{ amount || 0 | number:'1.2-2' }}/mês)
+                    </label>
+                  </div>
+                  <div class="form-check mb-0">
+                    <input class="form-check-input cursor-pointer" type="radio" name="amountMode" id="modeTotal" value="total" [(ngModel)]="amountMode">
+                    <label class="form-check-label cursor-pointer text-dark" for="modeTotal">
+                      Valor <strong>total</strong> a dividir
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Resumo do parcelamento / repetição -->
+              <div class="alert alert-info py-1.5 px-2.5 mb-0 d-flex align-items-center justify-content-between" style="font-size: 0.72rem;">
+                <div>
+                  <i class="bi bi-calendar-check me-1"></i>
+                  Serão gerados <strong>{{ recurrenceMonths }} lançamentos</strong> no <strong>dia {{ getRecurrenceDay() }}</strong> de cada mês:
+                  <span class="d-block text-dark mt-0.5">
+                    <strong>{{ recurrenceMonths }}x de R$ {{ getRecurrencePerInstallment() | number:'1.2-2' }}</strong>
+                    (Total: R$ {{ getRecurrenceTotal() | number:'1.2-2' }})
                   </span>
                 </div>
+                <span class="badge bg-secondary-subtle text-secondary border ms-2">
+                  1º Atual + {{ (recurrenceMonths || 1) - 1 }} Previstos
+                </span>
               </div>
             </div>
           </div>

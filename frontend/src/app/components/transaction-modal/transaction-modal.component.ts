@@ -40,6 +40,8 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
   // Recurring / Fixed monthly options
   isRecurring: boolean = false;
   recurrenceMonths: number = 12;
+  numberInstallments: boolean = true;
+  amountMode: 'per_installment' | 'total' = 'per_installment';
 
   loading = false;
   errorMessage = '';
@@ -126,6 +128,8 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       this.installments = editData.totalInstallments || 1;
       this.isRecurring = false;
       this.recurrenceMonths = 12;
+      this.numberInstallments = true;
+      this.amountMode = 'per_installment';
     } else {
       const activeContextId = this.api.getSelectedAccountId();
       this.type = TransactionType.Diario;
@@ -143,6 +147,8 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       this.installments = 1;
       this.isRecurring = false;
       this.recurrenceMonths = 12;
+      this.numberInstallments = true;
+      this.amountMode = 'per_installment';
     }
 
     this.filterCategories();
@@ -193,6 +199,27 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
     return `${this.installments}x de R$ ${perInst}`;
   }
 
+  getRecurrencePerInstallment(): number {
+    if (!this.amount) return 0;
+    if (this.amountMode === 'total' && this.recurrenceMonths > 1) {
+      return Number((this.amount / this.recurrenceMonths).toFixed(2));
+    }
+    return this.amount;
+  }
+
+  getRecurrenceTotal(): number {
+    if (!this.amount) return 0;
+    if (this.amountMode === 'total') {
+      return this.amount;
+    }
+    return Number((this.amount * this.recurrenceMonths).toFixed(2));
+  }
+
+  getRecurrenceDay(): number {
+    if (!this.date) return 2;
+    return parseInt(this.date.split('-')[2], 10);
+  }
+
   onSubmit(): void {
     if (!this.description || !this.amount || this.amount <= 0 || !this.date) {
       this.errorMessage = 'Por favor, informe uma descrição, valor válido e data.';
@@ -209,10 +236,14 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
 
     const isCard = Number(this.paymentMethod) === PaymentMethod.CartaoCredito;
 
+    const effectiveAmount = (!isCard && this.isRecurring && this.amountMode === 'total' && this.recurrenceMonths > 1)
+      ? Number((Number(this.amount) / Number(this.recurrenceMonths)).toFixed(2))
+      : Number(this.amount);
+
     const payload: TransactionCreateUpdate = {
       type: this.type,
       date: new Date(this.date + 'T12:00:00Z').toISOString(),
-      amount: Number(this.amount),
+      amount: effectiveAmount,
       description: this.description.trim(),
       categoryId: this.categoryId ? Number(this.categoryId) : undefined,
       accountId: this.accountId ? Number(this.accountId) : undefined,
@@ -222,7 +253,8 @@ export class TransactionModalComponent implements OnInit, OnDestroy {
       creditCardId: (isCard && this.creditCardId) ? Number(this.creditCardId) : undefined,
       installments: isCard ? Math.max(1, Number(this.installments) || 1) : undefined,
       isRecurring: (!isCard && !this.transactionToEdit && this.isRecurring) ? true : undefined,
-      recurrenceMonths: (!isCard && !this.transactionToEdit && this.isRecurring) ? Math.max(2, Number(this.recurrenceMonths) || 12) : undefined
+      recurrenceMonths: (!isCard && !this.transactionToEdit && this.isRecurring) ? Math.max(2, Number(this.recurrenceMonths) || 12) : undefined,
+      numberInstallments: (!isCard && !this.transactionToEdit && this.isRecurring) ? this.numberInstallments : undefined
     };
 
     if (this.transactionToEdit) {

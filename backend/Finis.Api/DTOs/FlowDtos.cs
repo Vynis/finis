@@ -13,6 +13,7 @@ public class DailyFlowDto
     public decimal TotalExpenses => TotalFixedExpenses + TotalDailyExpenses;
     public decimal NetDay => TotalIncome - TotalExpenses;
     public decimal CumulativeBalance { get; set; }
+    public decimal RealBalance { get; set; }
     public int TransactionsCount { get; set; }
     public List<TransactionResponseDto> Transactions { get; set; } = new();
 }
@@ -29,6 +30,7 @@ public class MonthlyFlowResponseDto
     public decimal TotalExpenses { get; set; }
     public decimal Performance { get; set; }
     public decimal FinalBalance { get; set; }
+    public decimal RealBankBalance { get; set; }
     public decimal SavingsRate { get; set; }
     public List<DailyFlowDto> Days { get; set; } = new();
 }
@@ -62,6 +64,7 @@ public class DashboardSummaryDto
     public int Month { get; set; }
     public string MonthName { get; set; } = string.Empty;
     public decimal CurrentBalance { get; set; }
+    public decimal RealBankBalance { get; set; }
     public decimal InitialBalance { get; set; }
     public decimal MonthIncome { get; set; }
     public decimal MonthFixedExpenses { get; set; }

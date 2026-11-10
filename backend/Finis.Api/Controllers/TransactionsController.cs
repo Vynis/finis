@@ -316,6 +316,12 @@ public class TransactionsController : BaseApiController
                 // Month 0 keeps the requested status; future months (m > 0) default to Previsto
                 var tStatus = (m == 0) ? dto.Status : TransactionStatus.Previsto;
 
+                string recDesc = dto.Description.Trim();
+                if (dto.NumberInstallments && totalMonths > 1)
+                {
+                    recDesc = $"{recDesc} ({m + 1}/{totalMonths})";
+                }
+
                 var recTransaction = new Transaction
                 {
                     UserId = userId,
@@ -323,12 +329,14 @@ public class TransactionsController : BaseApiController
                     Date = tDate,
                     Type = dto.Type,
                     Amount = dto.Amount,
-                    Description = dto.Description.Trim(),
+                    Description = recDesc,
                     CategoryId = dto.CategoryId,
                     Status = tStatus,
                     PaymentMethod = dto.PaymentMethod,
                     Notes = dto.Notes?.Trim(),
                     RecurrenceGroupId = recurrenceGroupId,
+                    InstallmentNumber = dto.NumberInstallments ? (m + 1) : null,
+                    TotalInstallments = dto.NumberInstallments ? totalMonths : null,
                     CreatedAt = DateTime.UtcNow
                 };
 

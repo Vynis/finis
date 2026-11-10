@@ -91,6 +91,7 @@ public class TermometroEngineService : ITermometroEngineService
         // Carry-over balance from month start
         decimal runningBalance = await GetCarryOverBalanceAsync(userId, monthStart, accountId);
         decimal monthInitialBalance = runningBalance;
+        decimal runningRealBalance = monthInitialBalance;
 
         // Fetch transactions for this month
         var transactionsQuery = _context.Transactions
@@ -180,6 +181,8 @@ public class TermometroEngineService : ITermometroEngineService
                     PaymentMethod = PaymentMethod.CartaoCredito,
                     CreditCardId = card.Id,
                     CreditCardName = card.Name,
+                    InvoiceMonth = month,
+                    InvoiceYear = year,
                     Notes = $"Lançamentos na fatura: {itemsSummary}",
                     IsInvoicePayment = false,
                     CreatedAt = DateTime.UtcNow
@@ -255,6 +258,19 @@ public class TermometroEngineService : ITermometroEngineService
             // Cascade formula: Saldo(d) = Saldo(d-1) + Entrada(d) - (SaidaFixa(d) + Diario(d))
             runningBalance = runningBalance + dayIncome - (dayFixed + dayDaily);
 
+            // Real balance formula: only realized transactions actually impact the bank account
+            decimal dayRealIncome = dayActualTransactions
+                .Where(t => t.Type == TransactionType.Entrada && t.Status == TransactionStatus.Realizado)
+                .Sum(t => t.Amount);
+
+            decimal dayRealExpenses = dayActualTransactions
+                .Where(t => (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
+                            t.Status == TransactionStatus.Realizado &&
+                            (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
+                .Sum(t => t.Amount);
+
+            runningRealBalance = runningRealBalance + dayRealIncome - dayRealExpenses;
+
             monthTotalIncome += dayIncome;
             monthTotalFixed += dayFixed;
             monthTotalDaily += dayDaily;
@@ -268,6 +284,7 @@ public class TermometroEngineService : ITermometroEngineService
                 TotalFixedExpenses = dayFixed,
                 TotalDailyExpenses = dayDaily,
                 CumulativeBalance = runningBalance,
+                RealBalance = runningRealBalance,
                 TransactionsCount = allDayTransactions.Count,
                 Transactions = allDayTransactions
             });
@@ -278,6 +295,12 @@ public class TermometroEngineService : ITermometroEngineService
         decimal savingsRate = monthTotalIncome > 0
             ? Math.Round((performance / monthTotalIncome) * 100m, 2)
             : 0;
+
+        var todayUtc = DateTime.UtcNow;
+        var todayFlow = daysList.FirstOrDefault(d => d.Day == todayUtc.Day);
+        decimal monthRealBankBalance = (year == todayUtc.Year && month == todayUtc.Month && todayFlow != null)
+            ? todayFlow.RealBalance
+            : runningRealBalance;
 
         return new MonthlyFlowResponseDto
         {
@@ -291,6 +314,7 @@ public class TermometroEngineService : ITermometroEngineService
             TotalExpenses = monthTotalExpenses,
             Performance = performance,
             FinalBalance = runningBalance,
+            RealBankBalance = monthRealBankBalance,
             SavingsRate = savingsRate,
             Days = daysList
         };
@@ -478,6 +502,9 @@ public class TermometroEngineService : ITermometroEngineService
         decimal realizedPerformance = realizedIncome - realizedExpenses;
         decimal pendingPerformance = pendingIncome - pendingExpenses;
 
+        // Realized bank balance (actual money in bank = initial carryover + realized income - realized expenses)
+        decimal realBankBalance = monthlyFlow.InitialBalance + realizedIncome - realizedExpenses;
+
         // Overdue summary: items scheduled before today that remain in 'Previsto' status
         var todayDate = DateTime.Today;
 
@@ -566,6 +593,7 @@ public class TermometroEngineService : ITermometroEngineService
             Month = month,
             MonthName = monthlyFlow.MonthName,
             CurrentBalance = currentBalance,
+            RealBankBalance = realBankBalance,
             InitialBalance = monthlyFlow.InitialBalance,
             MonthIncome = monthlyFlow.TotalIncome,
             MonthFixedExpenses = monthlyFlow.TotalFixedExpenses,

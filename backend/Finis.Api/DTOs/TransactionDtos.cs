@@ -34,6 +34,7 @@ public class TransactionCreateDto
     public bool IsRecurring { get; set; } = false;
     [Range(1, 60, ErrorMessage = "O número de meses recorrentes deve ser entre 1 e 60.")]
     public int? RecurrenceMonths { get; set; } = 1;
+    public bool NumberInstallments { get; set; } = false;
 }
 
 public class TransactionUpdateDto

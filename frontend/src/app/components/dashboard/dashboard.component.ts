@@ -54,6 +54,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.api.getDashboardSummary(this.selectedYear, this.selectedMonth).subscribe({
       next: data => {
+        if (data) {
+          if (data.realBankBalance === undefined || data.realBankBalance === null) {
+            data.realBankBalance = (data.initialBalance || 0) + (data.realizedIncome || 0) - (data.realizedExpenses || 0);
+          }
+        }
         this.summary = data;
         this.loading = false;
       },

@@ -51,6 +51,34 @@ export class MonthlyFlowComponent implements OnInit, OnDestroy {
     this.loading = true;
     this.api.getMonthlyFlow(this.selectedYear, this.selectedMonth).subscribe({
       next: data => {
+        if (data && data.days) {
+          let runningReal = data.initialBalance || 0;
+          let todayReal = runningReal;
+          const today = new Date();
+          const isCurrentMonth = today.getFullYear() === data.year && (today.getMonth() + 1) === data.month;
+
+          data.days.forEach(d => {
+            if (d.realBalance === undefined || d.realBalance === null) {
+              const dayRealIncome = (d.transactions || [])
+                .filter(t => t.type === 1 && t.status === 1)
+                .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+              const dayRealExpenses = (d.transactions || [])
+                .filter(t => (t.type === 2 || t.type === 3) && t.status === 1 && (t.paymentMethod !== 2 || t.isInvoicePayment))
+                .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+              runningReal = runningReal + dayRealIncome - dayRealExpenses;
+              d.realBalance = runningReal;
+            } else {
+              runningReal = d.realBalance;
+            }
+            const dDate = new Date(d.date);
+            if (isCurrentMonth && dDate.getDate() === today.getDate()) {
+              todayReal = d.realBalance;
+            }
+          });
+          if (data.realBankBalance === undefined || data.realBankBalance === null) {
+            data.realBankBalance = isCurrentMonth ? todayReal : runningReal;
+          }
+        }
         this.flow = data;
         this.loading = false;
       },

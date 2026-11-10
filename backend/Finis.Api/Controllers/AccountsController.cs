@@ -31,11 +31,22 @@ public class AccountsController : BaseApiController
 
         foreach (var a in accounts)
         {
-            var income = await _context.Transactions
+            var realizedIncome = await _context.Transactions
+                .Where(t => t.UserId == userId && t.AccountId == a.Id && t.Type == TransactionType.Entrada && t.Status == TransactionStatus.Realizado)
+                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+            var realizedExpenses = await _context.Transactions
+                .Where(t => t.UserId == userId && t.AccountId == a.Id &&
+                            (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
+                            t.Status == TransactionStatus.Realizado &&
+                            (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
+                .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+            var allIncome = await _context.Transactions
                 .Where(t => t.UserId == userId && t.AccountId == a.Id && t.Type == TransactionType.Entrada)
                 .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
-            var expenses = await _context.Transactions
+            var allExpenses = await _context.Transactions
                 .Where(t => t.UserId == userId && t.AccountId == a.Id &&
                             (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
                             (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
@@ -50,7 +61,8 @@ public class AccountsController : BaseApiController
                 Name = a.Name,
                 Type = a.Type,
                 InitialBalance = a.InitialBalance,
-                CurrentBalance = a.InitialBalance + income - expenses,
+                CurrentBalance = a.InitialBalance + realizedIncome - realizedExpenses,
+                ProjectedBalance = a.InitialBalance + allIncome - allExpenses,
                 ColorHex = a.ColorHex,
                 Icon = a.Icon,
                 IsActive = a.IsActive,
@@ -74,11 +86,22 @@ public class AccountsController : BaseApiController
             return NotFound(new { message = "Conta não encontrada." });
         }
 
-        var income = await _context.Transactions
+        var realizedIncome = await _context.Transactions
+            .Where(t => t.UserId == userId && t.AccountId == a.Id && t.Type == TransactionType.Entrada && t.Status == TransactionStatus.Realizado)
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+        var realizedExpenses = await _context.Transactions
+            .Where(t => t.UserId == userId && t.AccountId == a.Id &&
+                        (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
+                        t.Status == TransactionStatus.Realizado &&
+                        (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
+            .SumAsync(t => (decimal?)t.Amount) ?? 0;
+
+        var allIncome = await _context.Transactions
             .Where(t => t.UserId == userId && t.AccountId == a.Id && t.Type == TransactionType.Entrada)
             .SumAsync(t => (decimal?)t.Amount) ?? 0;
 
-        var expenses = await _context.Transactions
+        var allExpenses = await _context.Transactions
             .Where(t => t.UserId == userId && t.AccountId == a.Id &&
                         (t.Type == TransactionType.SaidaFixa || t.Type == TransactionType.Diario) &&
                         (t.PaymentMethod != PaymentMethod.CartaoCredito || t.IsInvoicePayment))
@@ -93,7 +116,8 @@ public class AccountsController : BaseApiController
             Name = a.Name,
             Type = a.Type,
             InitialBalance = a.InitialBalance,
-            CurrentBalance = a.InitialBalance + income - expenses,
+            CurrentBalance = a.InitialBalance + realizedIncome - realizedExpenses,
+            ProjectedBalance = a.InitialBalance + allIncome - allExpenses,
             ColorHex = a.ColorHex,
             Icon = a.Icon,
             IsActive = a.IsActive,

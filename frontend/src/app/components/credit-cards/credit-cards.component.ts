@@ -1,4 +1,5 @@
 import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FinisApiService } from '../../services/finis-api.service';
 import { Account, CreditCard, CreditCardCreateUpdate, CreditCardInvoiceSummary, PaymentMethod, Transaction } from '../../models/models';
@@ -64,9 +65,25 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
   accounts: Account[] = [];
   formAccountId: number | null = null;
 
-  constructor(private api: FinisApiService) {}
+  targetCardId: number | null = null;
+  targetYear: number | null = null;
+  targetMonth: number | null = null;
+
+  constructor(private api: FinisApiService, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['cardId']) {
+        this.targetCardId = Number(params['cardId']);
+      }
+      if (params['year']) {
+        this.targetYear = Number(params['year']);
+      }
+      if (params['month']) {
+        this.targetMonth = Number(params['month']);
+      }
+    });
+
     this.loadCards();
     this.loadAccounts();
     this.refreshSub = this.api.refresh$.subscribe(() => {
@@ -93,9 +110,13 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
         this.loadingCards = false;
 
         if (this.cards.length > 0) {
-          const currentId = this.selectedCard ? this.selectedCard.id : this.cards[0].id;
-          const matched = this.cards.find(c => c.id === currentId) || this.cards[0];
-          this.selectCard(matched);
+          let cardToSelect = this.cards[0];
+          if (this.targetCardId) {
+            cardToSelect = this.cards.find(c => c.id === this.targetCardId) || cardToSelect;
+          } else if (this.selectedCard) {
+            cardToSelect = this.cards.find(c => c.id === this.selectedCard!.id) || cardToSelect;
+          }
+          this.selectCard(cardToSelect);
         } else {
           this.selectedCard = null;
           this.upcomingInvoices = [];
@@ -120,8 +141,21 @@ export class CreditCardsComponent implements OnInit, OnDestroy {
         this.upcomingInvoices = invoices;
         this.loadingInvoices = false;
         if (invoices.length > 0) {
-          // Select open invoice or first one
-          this.selectedInvoice = invoices.find(inv => inv.status === 'Aberta') || invoices[0];
+          // If queryParams requested a specific invoice year/month, select it
+          if (this.targetYear && this.targetMonth) {
+            const matched = invoices.find(inv => inv.year === this.targetYear && inv.month === this.targetMonth);
+            if (matched) {
+              this.selectedInvoice = matched;
+              this.targetYear = null;
+              this.targetMonth = null;
+              return;
+            }
+          }
+
+          // Prioritize closed unpaid invoice (urgency to pay!), then open invoice, or first one
+          this.selectedInvoice = invoices.find(inv => inv.status === 'Fechada' && !inv.isPaid)
+            || invoices.find(inv => inv.status === 'Aberta')
+            || invoices[0];
         } else {
           this.selectedInvoice = null;
         }

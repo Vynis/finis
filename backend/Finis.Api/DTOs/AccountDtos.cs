@@ -47,6 +47,7 @@ public class AccountResponseDto
     public string TypeName => Type.ToString();
     public decimal InitialBalance { get; set; }
     public decimal CurrentBalance { get; set; }
+    public decimal ProjectedBalance { get; set; }
     public string ColorHex { get; set; } = "#10B981";
     public string Icon { get; set; } = "wallet2";
     public bool IsActive { get; set; }
